@@ -1,0 +1,5 @@
+{
+  "name": "观想阁",
+  "description": "A smart prompt management workspace. Auto-categorize prompts, visualize image generation with version history diffs, convert prompts for video models, and manage reasoning conversations. Features a simulated multi-user backend via local storage.",
+  "requestFramePermissions": []
+}
