@@ -1,6 +1,21 @@
+/**
+ * storageService.ts
+ * 
+ * 此文件已废弃 - 所有存储功能已迁移到后端 API
+ * 保留类型定义以供参考
+ * 
+ * 原有的 IndexedDB 实现已被注释，系统现在使用：
+ * - 后端 MySQL 数据库进行数据持久化
+ * - apiService.ts 进行所有数据操作
+ */
 
 import { User, PromptItem } from '../types';
 
+// ============================================================================
+// 已废弃的 IndexedDB 实现（已注释）
+// ============================================================================
+
+/*
 const DB_NAME = 'PromptCanvasDB';
 const DB_VERSION = 1;
 const STORE_USERS = 'users';
@@ -234,3 +249,27 @@ export const importDatabase = async (targetUserId: string, jsonContent: string):
     });
   });
 };
+*/
+
+// ============================================================================
+// 保留的类型定义（供参考）
+// ============================================================================
+
+// 扩展的用户类型（用于内部存储）
+interface StoredUser extends User {
+  password?: string;
+}
+
+// ============================================================================
+// 注意事项
+// ============================================================================
+// 
+// 所有数据操作现在应该通过 apiService.ts 进行：
+// - 用户认证: apiService.register(), apiService.login(), apiService.logout()
+// - 提示词管理: apiService.getPrompts(), apiService.createPrompt(), etc.
+// - 数据导入导出: apiService.exportData(), apiService.importData()
+//
+// 会话管理仍然使用 localStorage 存储 JWT 令牌：
+// - 'promptcanvas_token': JWT 访问令牌
+// - 'promptcanvas_session': 用户信息
+// ============================================================================

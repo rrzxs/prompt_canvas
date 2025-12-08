@@ -3,8 +3,7 @@ import { PromptItem, PromptVersion, VideoSettings, Attachment } from '../types';
 import { Icons } from './Icons';
 import { DiffViewer } from './DiffViewer';
 import { VideoModal } from './VideoModal';
-import { generateImage, convertToVideoPrompt } from '../services/geminiService';
-import { savePrompt } from '../services/storageService';
+import { apiService } from '../services/apiService';
 
 interface ImageCanvasProps {
   promptItem: PromptItem;
@@ -75,55 +74,45 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
     if (isEditorExpanded) setIsEditorExpanded(false);
 
     try {
-      // Pass active attachment as reference image if available
-      const imageUrl = await generateImage(textToUse, activeAttachment?.data);
+      // 使用 apiService 生成图片
+      const imageUrl = await apiService.generateImage(textToUse, activeAttachment?.data);
       
       // Calculate position for new card:
       const lastVersion = currentItem.versions[currentItem.versions.length - 1];
       const startX = lastVersion?.x !== undefined ? lastVersion.x + 50 : (-view.x / view.scale) + 100;
       const startY = lastVersion?.y !== undefined ? lastVersion.y + 50 : (-view.y / view.scale) + 400;
 
-      const newVersion: PromptVersion = {
-        id: crypto.randomUUID(),
+      const newVersion: Partial<PromptVersion> = {
         text: textToUse,
-        timestamp: Date.now(),
         imageUrl: imageUrl,
         x: startX,
         y: startY
       };
 
+      // 使用 apiService 添加版本
+      const createdVersion = await apiService.addVersion(currentItem.id, newVersion);
+
       const updatedItem: PromptItem = {
         ...currentItem,
         updatedAt: Date.now(),
-        activeVersionId: newVersion.id,
-        versions: [...currentItem.versions, newVersion],
+        activeVersionId: createdVersion.id,
+        versions: [...currentItem.versions, createdVersion],
         draftText: undefined 
       };
 
-      await savePrompt(updatedItem);
       setCurrentItem(updatedItem);
       onUpdate(updatedItem);
 
     } catch (error: any) {
       console.error(error);
       
-      let errorMessage = error.message || '未知错误';
+      // 从后端错误格式中提取错误信息
+      let errorMessage = error.response?.data?.error?.message || error.message || '未知错误';
       
-      // Enhanced Error Parsing
-      if (typeof errorMessage === 'string') {
-          if (errorMessage.startsWith('{') || errorMessage.includes('"error":')) {
-              try {
-                  const jsonObj = JSON.parse(errorMessage);
-                  errorMessage = jsonObj.error?.message || jsonObj.message || errorMessage;
-              } catch (e) {
-              }
-          }
-          
-          if (errorMessage.includes('API key not valid')) {
-              errorMessage = "API Key 无效。请检查环境变量配置。";
-          } else if (errorMessage.includes('Quota')) {
-              errorMessage = "API 配额已耗尽。";
-          }
+      if (errorMessage.includes('API key not valid')) {
+          errorMessage = "API Key 无效。请检查环境变量配置。";
+      } else if (errorMessage.includes('Quota') || errorMessage.includes('配额')) {
+          errorMessage = "API 配额已耗尽。";
       }
 
       alert(`生成图片失败: ${errorMessage}`);
@@ -186,40 +175,44 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
     if (isEditorExpanded) setIsEditorExpanded(false);
 
     try {
-      const videoPromptText = await convertToVideoPrompt(editableText, settings);
+      // 使用 apiService 转换视频提示词
+      const videoPromptText = await apiService.convertToVideoPrompt(editableText, settings);
       
       const lastVersion = currentItem.versions[currentItem.versions.length - 1];
       const startX = lastVersion?.x !== undefined ? lastVersion.x + 50 : (-view.x / view.scale) + 100;
       const startY = lastVersion?.y !== undefined ? lastVersion.y + 50 : (-view.y / view.scale) + 400;
 
-      const newVersion: PromptVersion = {
-        id: crypto.randomUUID(),
+      const newVersion: Partial<PromptVersion> = {
         text: videoPromptText,
-        timestamp: Date.now(),
         videoSettings: settings,
         x: startX,
         y: startY
       };
 
+      // 使用 apiService 添加版本
+      const createdVersion = await apiService.addVersion(currentItem.id, newVersion);
+
+      // 更新提示词类型为 VIDEO_PLAN
+      await apiService.updatePrompt(currentItem.id, { type: 'VIDEO_PLAN' as any });
+
       const updatedItem: PromptItem = {
         ...currentItem,
         updatedAt: Date.now(),
         type: 'VIDEO_PLAN' as any, 
-        activeVersionId: newVersion.id,
-        versions: [...currentItem.versions, newVersion],
+        activeVersionId: createdVersion.id,
+        versions: [...currentItem.versions, createdVersion],
         draftText: undefined
       };
 
       setEditableText(videoPromptText);
-      
-      await savePrompt(updatedItem);
       setCurrentItem(updatedItem);
       onUpdate(updatedItem);
       setIsVideoModalOpen(false);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('转换视频提示词失败');
+      const errorMessage = error.response?.data?.error?.message || '转换视频提示词失败';
+      alert(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -228,29 +221,31 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
   const handleDeleteVersion = async (versionId: string) => {
     if(!window.confirm('确定删除此卡片吗？')) return;
     
-    const updatedVersions = currentItem.versions.filter(v => v.id !== versionId);
-    
-    let newActiveId = currentItem.activeVersionId;
-    if (currentItem.activeVersionId === versionId || !updatedVersions.find(v => v.id === newActiveId)) {
-        const lastVer = updatedVersions[updatedVersions.length - 1];
-        newActiveId = lastVer ? lastVer.id : '';
-    }
-
-    const updatedItem = {
-        ...currentItem,
-        versions: updatedVersions,
-        activeVersionId: newActiveId,
-        updatedAt: Date.now()
-    };
-    
-    setCurrentItem(updatedItem);
-    onUpdate(updatedItem);
-    
     try {
-        await savePrompt(updatedItem);
-    } catch (e) {
-        console.error("Save failed", e);
-        alert("删除操作失败");
+      // 使用 apiService 删除版本
+      await apiService.deleteVersion(currentItem.id, versionId);
+      
+      const updatedVersions = currentItem.versions.filter(v => v.id !== versionId);
+      
+      let newActiveId = currentItem.activeVersionId;
+      if (currentItem.activeVersionId === versionId || !updatedVersions.find(v => v.id === newActiveId)) {
+          const lastVer = updatedVersions[updatedVersions.length - 1];
+          newActiveId = lastVer ? lastVer.id : '';
+      }
+
+      const updatedItem = {
+          ...currentItem,
+          versions: updatedVersions,
+          activeVersionId: newActiveId,
+          updatedAt: Date.now()
+      };
+      
+      setCurrentItem(updatedItem);
+      onUpdate(updatedItem);
+    } catch (e: any) {
+        console.error("删除版本失败", e);
+        const errorMessage = e.response?.data?.error?.message || "删除操作失败";
+        alert(errorMessage);
     }
   };
 
@@ -389,9 +384,23 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
   };
 
   const handleMouseUp = async () => {
-    if (drag.isDragging && drag.type === 'card') {
-        await savePrompt(currentItem);
-        onUpdate(currentItem);
+    if (drag.isDragging && drag.type === 'card' && drag.cardId) {
+        try {
+          // 获取更新后的版本位置
+          const updatedVersion = currentItem.versions.find(v => v.id === drag.cardId);
+          if (updatedVersion && updatedVersion.x !== undefined && updatedVersion.y !== undefined) {
+            // 使用 apiService 更新版本位置
+            await apiService.updateVersionPosition(
+              currentItem.id, 
+              drag.cardId, 
+              updatedVersion.x, 
+              updatedVersion.y
+            );
+            onUpdate(currentItem);
+          }
+        } catch (e: any) {
+          console.error("更新版本位置失败", e);
+        }
         // Clear guides when drop finishes
         setGuides({ x: null, y: null });
     }
@@ -467,8 +476,19 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
 
     const newItem = { ...currentItem, versions: updatedVersions };
     setCurrentItem(newItem);
-    await savePrompt(newItem);
-    onUpdate(newItem);
+    
+    // 使用 apiService 批量更新版本位置
+    try {
+      for (const version of updatedVersions) {
+        if (version.x !== undefined && version.y !== undefined) {
+          await apiService.updateVersionPosition(currentItem.id, version.id, version.x, version.y);
+        }
+      }
+      onUpdate(newItem);
+    } catch (e: any) {
+      console.error("更新版本位置失败", e);
+    }
+    
     setTimeout(handleResetView, 50);
   };
 

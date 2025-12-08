@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PromptItem, ChatMessage, Attachment } from '../types';
 import { Icons } from './Icons';
-import { sendChatMessage } from '../services/geminiService';
-import { savePrompt } from '../services/storageService';
+import { apiService } from '../services/apiService';
 
 interface ChatInterfaceProps {
   promptItem: PromptItem;
@@ -42,20 +41,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
     setIsTyping(true);
 
     try {
-      // Pass activeAttachments to service
-      const responseText = await sendChatMessage(messages, userMsg.text, userMsg.attachments);
+      // 使用 apiService 发送聊天消息
+      const responseText = await apiService.sendChatMessage(messages, userMsg.text, userMsg.attachments);
       const modelMsg: ChatMessage = { role: 'model', text: responseText, timestamp: Date.now() };
       
       const finalHistory = [...newHistory, modelMsg];
       setMessages(finalHistory);
       
+      // 使用 apiService 更新提示词
       const updatedItem = { ...promptItem, chatHistory: finalHistory, updatedAt: Date.now() };
-      await savePrompt(updatedItem);
+      await apiService.updatePrompt(promptItem.id, { chatHistory: finalHistory });
       onUpdate(updatedItem);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      const errorMsg: ChatMessage = { role: 'model', text: "与AI通讯出错，请稍后再试。", timestamp: Date.now() };
+      // 从后端错误格式中提取错误信息
+      const errorMessage = error.response?.data?.error?.message || "与AI通讯出错，请稍后再试。";
+      const errorMsg: ChatMessage = { role: 'model', text: errorMessage, timestamp: Date.now() };
       setMessages([...newHistory, errorMsg]);
     } finally {
       setIsTyping(false);

@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Icons } from './components/Icons';
 import { User, PromptItem, PromptType } from './types';
-import { loginUser, registerUser, logoutUser, getSessionUser, getPrompts, savePrompt, deletePrompt, exportDatabase, importDatabase } from './services/storageService';
-import { classifyPrompt, getApiKeyInfo } from './services/geminiService';
 import { ImageCanvas } from './components/ImageCanvas';
 import { ChatInterface } from './components/ChatInterface';
+import { apiService } from './services/apiService';
 
 // ... (Sidebar, SettingsPage, LoginPage, Dashboard components remain unchanged)
 const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () => void, onCloseMobile?: () => void }) => {
@@ -73,15 +72,14 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
 const SettingsPage = ({ user }: { user: User }) => {
   const [jsonOutput, setJsonOutput] = useState('');
   const [importStatus, setImportStatus] = useState('');
-  const apiKeyInfo = getApiKeyInfo();
 
   const handleExport = async () => {
     try {
-      const json = await exportDatabase(user.id);
-      setJsonOutput(json);
+      // 使用 apiService 导出数据
+      const blob = await apiService.exportData();
+      setJsonOutput('导出成功');
       
       // Auto download
-      const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -90,8 +88,9 @@ const SettingsPage = ({ user }: { user: User }) => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      alert('导出失败');
+    } catch (e: any) {
+      const errorMessage = e.response?.data?.error?.message || '导出失败';
+      alert(errorMessage);
     }
   };
 
@@ -99,52 +98,21 @@ const SettingsPage = ({ user }: { user: User }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-       const content = ev.target?.result as string;
-       if (!content) return;
-       try {
-          setImportStatus('导入中...');
-          await importDatabase(user.id, content);
-          setImportStatus('导入成功！请刷新页面。');
-          setTimeout(() => window.location.reload(), 1500);
-       } catch (err: any) {
-          setImportStatus(`错误: ${err.message}`);
-       }
-    };
-    reader.readAsText(file);
+    try {
+      setImportStatus('导入中...');
+      // 使用 apiService 导入数据
+      const result = await apiService.importData(file);
+      setImportStatus(`导入成功！已导入 ${result.imported_count} 条记录。请刷新页面。`);
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error?.message || err.message || '导入失败';
+      setImportStatus(`错误: ${errorMessage}`);
+    }
   };
 
   return (
     <div className="p-8 h-full overflow-y-auto">
       <h2 className="text-2xl font-bold text-white mb-8">设置 & 数据管理</h2>
-
-      {/* API Key Diagnostic Section */}
-      <div className="mb-8 bg-slate-900/50 border border-slate-700 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Icons.Activity className="w-5 h-5 text-accent" />
-              API 连接诊断
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="bg-slate-800 p-3 rounded-lg">
-                  <span className="text-slate-400 block text-xs mb-1">状态</span>
-                  <span className={`font-mono font-bold ${apiKeyInfo.status === 'valid_format' ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {apiKeyInfo.status === 'valid_format' ? '格式正常' : apiKeyInfo.status === 'missing' ? '未配置' : '格式异常'}
-                  </span>
-              </div>
-              <div className="bg-slate-800 p-3 rounded-lg">
-                  <span className="text-slate-400 block text-xs mb-1">Key 预览</span>
-                  <span className="font-mono text-white">{apiKeyInfo.preview}</span>
-              </div>
-              <div className="bg-slate-800 p-3 rounded-lg">
-                  <span className="text-slate-400 block text-xs mb-1">长度检查</span>
-                  <span className="font-mono text-white">{apiKeyInfo.length} 字符</span>
-              </div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">
-             提示：如果状态显示异常，请检查 Cloud Run 环境变量配置。Key 应以 "AIza" 开头，且不包含引号。
-          </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
         <div className="bg-panel border border-slate-700 rounded-xl p-6">
@@ -234,15 +202,29 @@ const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
 
     setLoading(true);
     try {
-      let user;
       if (isRegister) {
-        user = await registerUser(username, password);
+        // 注册用户
+        const newUser = await apiService.register(username, password);
+        // 注册成功后自动登录
+        const authResponse = await apiService.login(username, password);
+        // 存储令牌和用户信息
+        localStorage.setItem('promptcanvas_token', authResponse.access_token);
+        localStorage.setItem('promptcanvas_session', JSON.stringify(newUser));
+        onLogin(newUser);
       } else {
-        user = await loginUser(username, password);
+        // 登录用户
+        const authResponse = await apiService.login(username, password);
+        // 获取用户信息
+        const user = await apiService.getCurrentUser();
+        // 存储令牌和用户信息
+        localStorage.setItem('promptcanvas_token', authResponse.access_token);
+        localStorage.setItem('promptcanvas_session', JSON.stringify(user));
+        onLogin(user);
       }
-      onLogin(user);
     } catch (err: any) {
-      setError(err.message || "操作失败");
+      // 从后端错误格式中提取错误信息
+      const errorMessage = err.response?.data?.error?.message || err.message || "操作失败";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -347,35 +329,30 @@ const Dashboard = ({ user }: { user: User }) => {
     if (!input.trim()) return;
     setIsAnalyzing(true);
     try {
-      const classification = await classifyPrompt(input);
+      // 使用 apiService 分类提示词
+      const classification = await apiService.classifyPrompt(input);
       
-      const newPrompt: PromptItem = {
-        id: crypto.randomUUID(),
-        userId: user.id,
+      const newPrompt: Partial<PromptItem> = {
         title: classification.title,
         type: classification.type,
         tags: classification.tags,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        activeVersionId: '',
-        versions: [],
-        chatHistory: []
+        draftText: classification.type === PromptType.IMAGE ? input : undefined,
       };
 
-      if (classification.type === PromptType.IMAGE) {
-        // Initialize with no versions, just draft text
-        newPrompt.versions = [];
-        newPrompt.activeVersionId = '';
-        newPrompt.draftText = input;
-      } else {
-        newPrompt.chatHistory = [{ role: 'user', text: input, timestamp: Date.now() }];
+      // 使用 apiService 创建提示词
+      const createdPrompt = await apiService.createPrompt(newPrompt);
+      
+      // 如果是文本类型，添加初始聊天消息
+      if (classification.type === PromptType.TEXT) {
+        // TODO: 需要后端支持添加聊天消息的 API
+        // 暂时先导航到详情页
       }
-
-      await savePrompt(newPrompt);
-      navigate(`/prompt/${newPrompt.id}`);
+      
+      navigate(`/prompt/${createdPrompt.id}`);
     } catch (e: any) {
       console.error(e);
-      alert(`创建提示词出错: ${e.message || e}`);
+      const errorMessage = e.response?.data?.error?.message || e.message || '创建提示词出错';
+      alert(`创建提示词出错: ${errorMessage}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -434,17 +411,30 @@ const Dashboard = ({ user }: { user: User }) => {
 const Library = ({ user }: { user: User }) => {
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const category = searchParams.get('category');
 
-  useEffect(() => {
-    getPrompts(user.id).then(data => {
+  const loadPrompts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiService.getPrompts(category || undefined);
       setPrompts(data);
+    } catch (err: any) {
+      console.error('获取提示词列表失败', err);
+      const errorMessage = err.response?.data?.error?.message || '加载提示词列表失败';
+      setError(errorMessage);
+    } finally {
       setLoading(false);
-    });
-  }, [user.id]);
+    }
+  };
+
+  useEffect(() => {
+    loadPrompts();
+  }, [category]);
 
   const filtered = prompts.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
@@ -466,9 +456,19 @@ const Library = ({ user }: { user: User }) => {
     e.stopPropagation();
     
     if(window.confirm('确定要删除此提示词吗？操作不可恢复。')) {
-      // Optimistic update
-      setPrompts(prev => prev.filter(p => p.id !== id));
-      await deletePrompt(id);
+      try {
+        // Optimistic update
+        setPrompts(prev => prev.filter(p => p.id !== id));
+        // 使用 apiService 删除提示词
+        await apiService.deletePrompt(id);
+      } catch (err: any) {
+        console.error('删除提示词失败', err);
+        // 如果删除失败，重新加载列表
+        const data = await apiService.getPrompts(category || undefined);
+        setPrompts(data);
+        const errorMessage = err.response?.data?.error?.message || '删除失败';
+        alert(errorMessage);
+      }
     }
   }
 
@@ -501,7 +501,18 @@ const Library = ({ user }: { user: User }) => {
         </div>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="text-center py-20 bg-red-500/10 rounded-xl border border-red-500/50">
+           <Icons.X className="w-12 h-12 text-red-400 mx-auto mb-4" />
+           <p className="text-red-300 mb-4">{error}</p>
+           <button 
+             onClick={loadPrompts}
+             className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+           >
+             重试
+           </button>
+        </div>
+      ) : loading ? (
         <div className="text-center py-20 text-slate-500 flex flex-col items-center">
            <Icons.Refresh className="w-8 h-8 animate-spin mb-4 opacity-50" />
            正在加载灵感库...
@@ -593,13 +604,17 @@ const PromptDetail = ({ user }: { user: User }) => {
   useEffect(() => {
     if (id) {
       setLoading(true);
-      getPrompts(user.id).then(prompts => {
-        const found = prompts.find(p => p.id === id);
-        setPrompt(found || null);
+      // 使用 apiService 获取单个提示词详情
+      apiService.getPrompt(id).then(prompt => {
+        setPrompt(prompt);
+        setLoading(false);
+      }).catch(err => {
+        console.error('获取提示词详情失败', err);
+        setPrompt(null);
         setLoading(false);
       });
     }
-  }, [id, user.id]);
+  }, [id]);
 
   const handleUpdate = (updated: PromptItem) => {
     setPrompt(updated);
@@ -698,13 +713,33 @@ const App = () => {
   const [init, setInit] = useState(false);
 
   useEffect(() => {
-    const session = getSessionUser();
-    if (session) setUser(session);
-    setInit(true);
+    const initAuth = async () => {
+      // 检查是否有存储的令牌
+      const token = localStorage.getItem('promptcanvas_token');
+      if (token) {
+        try {
+          // 尝试获取当前用户信息
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
+        } catch (err) {
+          // 如果获取失败（401），清除令牌
+          console.error('认证失败，清除令牌', err);
+          localStorage.removeItem('promptcanvas_token');
+          localStorage.removeItem('promptcanvas_session');
+        }
+      }
+      setInit(true);
+    };
+    
+    initAuth();
   }, []);
 
   const handleLogout = () => {
-    logoutUser();
+    // 调用 apiService 清除令牌
+    apiService.logout();
+    // 清除本地存储
+    localStorage.removeItem('promptcanvas_token');
+    localStorage.removeItem('promptcanvas_session');
     setUser(null);
   };
 

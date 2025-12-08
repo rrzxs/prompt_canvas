@@ -1,5 +1,23 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+/**
+ * geminiService.ts
+ * 
+ * 此文件已废弃 - 所有 AI 服务调用已迁移到后端 API
+ * 保留类型定义以供参考
+ * 
+ * 原有的直接 Gemini API 调用已被注释，系统现在使用：
+ * - 后端代理所有 AI 服务请求
+ * - apiService.ts 进行所有 AI 功能调用
+ * - API 密钥安全地存储在后端服务器
+ */
+
 import { PromptType, Attachment } from "../types";
+
+// ============================================================================
+// 已废弃的直接 API 调用实现（已注释）
+// ============================================================================
+
+/*
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 
 // Sanitize API Key: remove whitespace and quotes that might be injected by build tools/env files
 const rawApiKey = process.env.API_KEY || '';
@@ -12,9 +30,7 @@ const checkApiKey = () => {
   if (!API_KEY) throw new Error("API Key is missing. Please check your environment variables.");
 };
 
-/**
- * Diagnostic helper to check API Key status safely in UI
- */
+// Diagnostic helper to check API Key status safely in UI
 export const getApiKeyInfo = () => {
   if (!API_KEY) return { status: 'missing', length: 0, preview: 'N/A' };
   
@@ -29,10 +45,8 @@ export const getApiKeyInfo = () => {
   };
 };
 
-/**
- * Auto-categorize the user's input to decide if it's a visual prompt or a text/reasoning task.
- * Wrapped in try/catch to prevent blocking UI if API fails.
- */
+// Auto-categorize the user's input to decide if it's a visual prompt or a text/reasoning task.
+// Wrapped in try/catch to prevent blocking UI if API fails.
 export const classifyPrompt = async (input: string): Promise<{ type: PromptType, title: string, tags: string[] }> => {
   try {
     checkApiKey();
@@ -86,11 +100,9 @@ export const classifyPrompt = async (input: string): Promise<{ type: PromptType,
   }
 };
 
-/**
- * Generate an image based on the prompt.
- * Model: Gemini 3 Pro Image Preview (gemini-3-pro-image-preview)
- * Supports optional reference image for image-to-image generation.
- */
+// Generate an image based on the prompt.
+// Model: Gemini 3 Pro Image Preview (gemini-3-pro-image-preview)
+// Supports optional reference image for image-to-image generation.
 export const generateImage = async (prompt: string, referenceImageBase64?: string): Promise<string> => {
   checkApiKey();
 
@@ -137,9 +149,7 @@ export const generateImage = async (prompt: string, referenceImageBase64?: strin
   }
 };
 
-/**
- * Convert a standard image prompt into a detailed video generation prompt.
- */
+// Convert a standard image prompt into a detailed video generation prompt.
 export const convertToVideoPrompt = async (
   originalPrompt: string, 
   settings: any
@@ -162,10 +172,8 @@ export const convertToVideoPrompt = async (
   return response.text || originalPrompt;
 };
 
-/**
- * Chat with the model for reasoning tasks.
- * Supports optional attachments (images, docs, etc.) for multimodal chat.
- */
+// Chat with the model for reasoning tasks.
+// Supports optional attachments (images, docs, etc.) for multimodal chat.
 export const sendChatMessage = async (history: any[], newMessage: string, attachments?: Attachment[]) => {
   checkApiKey();
   
@@ -219,3 +227,29 @@ export const sendChatMessage = async (history: any[], newMessage: string, attach
   const result = await chat.sendMessage({ message: messageParts });
   return result.text;
 };
+*/
+
+// ============================================================================
+// 保留的类型定义（供参考）
+// ============================================================================
+
+// 分类结果类型
+export interface ClassificationResult {
+  type: PromptType;
+  title: string;
+  tags: string[];
+}
+
+// ============================================================================
+// 注意事项
+// ============================================================================
+// 
+// 所有 AI 服务调用现在应该通过 apiService.ts 进行：
+// - 提示词分类: apiService.classifyPrompt(input)
+// - 图片生成: apiService.generateImage(prompt, referenceImage)
+// - 聊天对话: apiService.sendChatMessage(history, message, attachments)
+// - 视频提示词转换: apiService.convertToVideoPrompt(prompt, settings)
+//
+// API 密钥现在安全地存储在后端服务器的环境变量中
+// 前端不再需要配置或访问 API_KEY
+// ============================================================================
