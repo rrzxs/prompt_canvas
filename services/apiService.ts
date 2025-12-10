@@ -13,8 +13,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 // 认证响应接口
 export interface AuthResponse {
-  access_token: string;
-  token_type: string;
+  accessToken: string;
+  tokenType: string;
 }
 
 // 分类结果接口
@@ -134,7 +134,7 @@ class ApiService {
     });
     
     // 保存令牌
-    this.setToken(response.data.access_token);
+    this.setToken(response.data.accessToken);
     
     return response.data;
   }

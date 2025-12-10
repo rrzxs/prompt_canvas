@@ -208,7 +208,7 @@ const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
         // 注册成功后自动登录
         const authResponse = await apiService.login(username, password);
         // 存储令牌和用户信息
-        localStorage.setItem('promptcanvas_token', authResponse.access_token);
+        localStorage.setItem('promptcanvas_token', authResponse.accessToken);
         localStorage.setItem('promptcanvas_session', JSON.stringify(newUser));
         onLogin(newUser);
       } else {
@@ -217,7 +217,7 @@ const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
         // 获取用户信息
         const user = await apiService.getCurrentUser();
         // 存储令牌和用户信息
-        localStorage.setItem('promptcanvas_token', authResponse.access_token);
+        localStorage.setItem('promptcanvas_token', authResponse.accessToken);
         localStorage.setItem('promptcanvas_session', JSON.stringify(user));
         onLogin(user);
       }
@@ -334,7 +334,7 @@ const Dashboard = ({ user }: { user: User }) => {
       
       const newPrompt: Partial<PromptItem> = {
         title: classification.title,
-        type: classification.type,
+        type: classification.type as PromptType,
         tags: classification.tags,
         draftText: classification.type === PromptType.IMAGE ? input : undefined,
       };
