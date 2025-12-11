@@ -47,7 +47,7 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
            <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">菜单</p>
            <NavItem path="/dashboard" icon={Icons.LayoutGrid} label="仪表盘" />
            <NavItem path="/library" icon={Icons.History} label="灵感库" />
-           <NavItem path="/settings" icon={Icons.Settings} label="设置 & 数据" />
+           {/* <NavItem path="/settings" icon={Icons.Settings} label="设置 & 数据" /> */}
         </div>
       </div>
 
