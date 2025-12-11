@@ -340,6 +340,56 @@ class ApiService {
   getImageUrl(filename: string): string {
     return `${API_BASE_URL}/api/files/${filename}`;
   }
+
+  /**
+   * 提取错误信息
+   * 支持多种后端错误格式
+   */
+  getErrorMessage(error: any): string {
+    if (!error) return '未知错误';
+    
+    // 1. 尝试获取 FastAPI 自定义 detail 字典中的 message
+    // 例如: {"detail": {"code": "...", "message": "用户名已存在"}}
+    if (error.response?.data?.detail?.message) {
+      return error.response.data.detail.message;
+    }
+    
+    // 2. 尝试获取 FastAPI 标准 detail 字符串
+    // 例如: {"detail": "错误信息"}
+    if (typeof error.response?.data?.detail === 'string') {
+      return error.response.data.detail;
+    }
+
+    // 3. 尝试获取 Pydantic 验证错误
+    // 例如: {"detail": [{"msg": "Field required", ...}]}
+    if (Array.isArray(error.response?.data?.detail) && error.response.data.detail.length > 0) {
+      const firstError = error.response.data.detail[0];
+      return firstError.msg || '参数验证失败';
+    }
+    
+    // 4. 尝试获取 GeminiServiceError 格式
+    // 例如: {"error": {"message": "..."}}
+    if (error.response?.data?.error?.message) {
+      return error.response.data.error.message;
+    }
+    
+    // 5. 尝试获取通用 message 字段
+    if (error.response?.data?.message) {
+      return error.response.data.message;
+    }
+    
+    // 6. Axios 错误消息处理
+    if (error.response?.status === 409) return '资源已存在或冲突';
+    if (error.response?.status === 404) return '未找到请求的资源';
+    if (error.response?.status === 403) return '没有权限执行此操作';
+    if (error.response?.status === 401) return '认证失败，请重新登录';
+    if (error.response?.status === 500) return '服务器内部错误';
+    
+    if (error.code === 'ERR_NETWORK') return '网络连接失败，请检查网络设置';
+    if (error.message === 'Network Error') return '网络连接失败';
+    
+    return error.message || '操作失败，请重试';
+  }
 }
 
 // 导出单例实例

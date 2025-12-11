@@ -89,8 +89,7 @@ const SettingsPage = ({ user }: { user: User }) => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e: any) {
-      const errorMessage = e.response?.data?.error?.message || '导出失败';
-      alert(errorMessage);
+      alert(apiService.getErrorMessage(e));
     }
   };
 
@@ -105,8 +104,7 @@ const SettingsPage = ({ user }: { user: User }) => {
       setImportStatus(`导入成功！已导入 ${result.imported_count} 条记录。请刷新页面。`);
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.message || '导入失败';
-      setImportStatus(`错误: ${errorMessage}`);
+      setImportStatus(`错误: ${apiService.getErrorMessage(err)}`);
     }
   };
 
@@ -222,9 +220,7 @@ const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
         onLogin(user);
       }
     } catch (err: any) {
-      // 从后端错误格式中提取错误信息
-      const errorMessage = err.response?.data?.error?.message || err.message || "操作失败";
-      setError(errorMessage);
+      setError(apiService.getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -351,8 +347,7 @@ const Dashboard = ({ user }: { user: User }) => {
       navigate(`/prompt/${createdPrompt.id}`);
     } catch (e: any) {
       console.error(e);
-      const errorMessage = e.response?.data?.error?.message || e.message || '创建提示词出错';
-      alert(`创建提示词出错: ${errorMessage}`);
+      alert(`创建提示词出错: ${apiService.getErrorMessage(e)}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -425,8 +420,7 @@ const Library = ({ user }: { user: User }) => {
       setPrompts(data);
     } catch (err: any) {
       console.error('获取提示词列表失败', err);
-      const errorMessage = err.response?.data?.error?.message || '加载提示词列表失败';
-      setError(errorMessage);
+      setError(apiService.getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -464,10 +458,11 @@ const Library = ({ user }: { user: User }) => {
       } catch (err: any) {
         console.error('删除提示词失败', err);
         // 如果删除失败，重新加载列表
-        const data = await apiService.getPrompts(category || undefined);
-        setPrompts(data);
-        const errorMessage = err.response?.data?.error?.message || '删除失败';
-        alert(errorMessage);
+        try {
+            const data = await apiService.getPrompts(category || undefined);
+            setPrompts(data);
+        } catch (ignored) {}
+        alert(apiService.getErrorMessage(err));
       }
     }
   }

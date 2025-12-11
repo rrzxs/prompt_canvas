@@ -55,8 +55,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
 
     } catch (error: any) {
       console.error(error);
-      // 从后端错误格式中提取错误信息
-      const errorMessage = error.response?.data?.error?.message || "与AI通讯出错，请稍后再试。";
+      const errorMessage = apiService.getErrorMessage(error);
       const errorMsg: ChatMessage = { role: 'model', text: errorMessage, timestamp: Date.now() };
       setMessages([...newHistory, errorMsg]);
     } finally {

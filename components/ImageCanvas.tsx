@@ -105,9 +105,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
 
     } catch (error: any) {
       console.error(error);
-      
-      // 从后端错误格式中提取错误信息
-      let errorMessage = error.response?.data?.error?.message || error.message || '未知错误';
+      let errorMessage = apiService.getErrorMessage(error);
       
       if (errorMessage.includes('API key not valid')) {
           errorMessage = "API Key 无效。请检查环境变量配置。";
@@ -244,8 +242,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
       onUpdate(updatedItem);
     } catch (e: any) {
         console.error("删除版本失败", e);
-        const errorMessage = e.response?.data?.error?.message || "删除操作失败";
-        alert(errorMessage);
+        alert(apiService.getErrorMessage(e));
     }
   };
 
