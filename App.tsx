@@ -162,7 +162,7 @@ const SettingsPage = ({ user }: { user: User }) => {
         </div>
       </div>
 
-      <div className="mt-12 p-6 bg-slate-900/50 rounded-xl border border-slate-800">
+      {/* <div className="mt-12 p-6 bg-slate-900/50 rounded-xl border border-slate-800">
          <h4 className="text-white font-bold mb-2 flex items-center gap-2">
             <Icons.Activity className="w-4 h-4 text-slate-500" />
             关于跨平台同步
@@ -171,7 +171,7 @@ const SettingsPage = ({ user }: { user: User }) => {
             当前为“离线优先”模式，数据存储在您设备的浏览器数据库中 (IndexedDB)，因此不同设备间数据默认不互通。
             使用上方的<b>导出</b>和<b>导入</b>功能，您可以手动将数据从电脑迁移到手机，或在不同浏览器间同步。
          </p>
-      </div>
+      </div> */}
     </div>
   );
 };
