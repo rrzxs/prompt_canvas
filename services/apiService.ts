@@ -250,7 +250,7 @@ class ApiService {
    * 生成图片
    */
   async generateImage(prompt: string, referenceImage?: string): Promise<string> {
-    const response = await this.client.post<{ image_url: string }>(
+    const response = await this.client.post<{ imageUrl: string }>(
       '/api/ai/generate-image',
       {
         prompt,
@@ -260,7 +260,7 @@ class ApiService {
         timeout: 120000, // 图片生成需要更长时间，设置为 120 秒
       }
     );
-    return response.data.image_url;
+    return response.data.imageUrl;
   }
 
   /**
@@ -283,11 +283,11 @@ class ApiService {
    * 转换为视频提示词
    */
   async convertToVideoPrompt(prompt: string, settings: VideoSettings): Promise<string> {
-    const response = await this.client.post<{ video_prompt: string }>('/api/ai/convert-video', {
+    const response = await this.client.post<{ videoPrompt: string }>('/api/ai/convert-video', {
       prompt,
       settings,
     });
-    return response.data.video_prompt;
+    return response.data.videoPrompt;
   }
 
   // ==================== 数据管理 API ====================
@@ -298,6 +298,7 @@ class ApiService {
   async exportData(): Promise<Blob> {
     const response = await this.client.get('/api/data/export', {
       responseType: 'blob',
+      timeout: 300000, // 数据导出可能较大，设置超时为 5 分钟
     });
     return response.data;
   }
