@@ -9,7 +9,9 @@ import {
 } from '../types';
 
 // API 基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// 默认使用空字符串（相对路径），由 Axios 自动拼接。
+// 注意：VITE_API_BASE_URL 应在 .env 文件中配置，生产环境留空即可
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // 认证响应接口
 export interface AuthResponse {
@@ -163,7 +165,7 @@ class ApiService {
    */
   async getPrompts(category?: string): Promise<PromptItem[]> {
     const params = category ? { category } : {};
-    const response = await this.client.get<PromptItem[]>('/api/prompts', { params });
+    const response = await this.client.get<PromptItem[]>('/api/prompts/', { params });
     return response.data;
   }
 
@@ -179,7 +181,7 @@ class ApiService {
    * 创建提示词
    */
   async createPrompt(prompt: Partial<PromptItem>): Promise<PromptItem> {
-    const response = await this.client.post<PromptItem>('/api/prompts', prompt);
+    const response = await this.client.post<PromptItem>('/api/prompts/', prompt);
     return response.data;
   }
 

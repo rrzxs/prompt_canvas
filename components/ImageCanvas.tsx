@@ -75,6 +75,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
 
     try {
       // 使用 apiService 生成图片
+      // 后端现在会保存图片到本地并返回相对 URL (例如 /static/images/xxx.png)
       const imageUrl = await apiService.generateImage(textToUse, activeAttachment?.data);
       
       // Calculate position for new card:
