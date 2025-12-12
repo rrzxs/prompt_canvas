@@ -405,6 +405,7 @@ const Dashboard = ({ user }: { user: User }) => {
 
 const Library = ({ user }: { user: User }) => {
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
+  const [publicPrompts, setPublicPrompts] = useState<PromptItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -416,8 +417,12 @@ const Library = ({ user }: { user: User }) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiService.getPrompts(category || undefined);
-      setPrompts(data);
+      const [personalData, publicData] = await Promise.all([
+        apiService.getPrompts(category || undefined),
+        apiService.getPublicPrompts(category || undefined)
+      ]);
+      setPrompts(personalData);
+      setPublicPrompts(publicData);
     } catch (err: any) {
       console.error('获取提示词列表失败', err);
       setError(apiService.getErrorMessage(err));
@@ -430,7 +435,7 @@ const Library = ({ user }: { user: User }) => {
     loadPrompts();
   }, [category]);
 
-  const filtered = prompts.filter(p => {
+  const filterPrompts = (list: PromptItem[]) => list.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
     
     if (!matchesSearch) return false;
@@ -444,6 +449,25 @@ const Library = ({ user }: { user: User }) => {
     
     return true;
   });
+
+  const filteredPersonal = filterPrompts(prompts);
+  const filteredPublic = filterPrompts(publicPrompts);
+
+  const handleTogglePublic = async (e: React.MouseEvent, prompt: PromptItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+        const updated = await apiService.updatePrompt(prompt.id, { isPublic: !prompt.isPublic });
+        // Update local state
+        setPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, isPublic: updated.isPublic } : p));
+        // Also refresh public list
+        const publicData = await apiService.getPublicPrompts(category || undefined);
+        setPublicPrompts(publicData);
+    } catch (err: any) {
+        alert(apiService.getErrorMessage(err));
+    }
+  };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -466,6 +490,83 @@ const Library = ({ user }: { user: User }) => {
       }
     }
   }
+
+  const renderCard = (prompt: PromptItem, isPersonal: boolean) => {
+    // Find background image from the first version that has one
+    const bgImage = prompt.versions?.find(v => v.imageUrl)?.imageUrl;
+
+    return (
+    <div 
+      key={prompt.id} 
+      onClick={() => navigate(`/prompt/${prompt.id}`)}
+      className="bg-panel border border-slate-700 rounded-xl p-4 hover:border-slate-500 transition-all cursor-pointer group relative flex flex-col h-48 overflow-hidden shadow-lg hover:shadow-xl"
+    >
+      {/* Background Image with Overlay */}
+      {bgImage && (
+          <>
+            <div 
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-80"
+                style={{ backgroundImage: `url(${bgImage})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-900/40" />
+          </>
+      )}
+
+      {/* Content relative z-10 */}
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex justify-between items-start mb-3">
+          <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm ${
+            prompt.type === PromptType.IMAGE || prompt.type === PromptType.VIDEO_PLAN 
+              ? 'bg-indigo-900/80 text-indigo-300 border border-indigo-500/30' 
+              : 'bg-emerald-900/80 text-emerald-300 border border-emerald-500/30'
+          }`}>
+            {prompt.type === PromptType.VIDEO_PLAN ? '视频' : prompt.type === PromptType.IMAGE ? '绘画' : '文本'}
+          </div>
+          
+          {isPersonal && (
+              <button 
+                type="button"
+                onClick={(e) => handleDelete(e, prompt.id)}
+                onMouseDown={(e) => e.stopPropagation()} 
+                className="text-slate-400 hover:text-red-400 hover:bg-red-500/20 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm bg-slate-900/50"
+                title="删除提示词"
+              >
+                <Icons.Trash className="w-4 h-4" />
+              </button>
+          )}
+        </div>
+        
+        <h3 className="font-bold text-white mb-2 line-clamp-2 drop-shadow-md text-lg">{prompt.title}</h3>
+        
+        <div className="flex flex-wrap gap-1 mb-auto">
+          {prompt.tags.slice(0, 3).map(t => (
+            <span key={t} className="text-[10px] bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 px-1.5 py-0.5 rounded">{t}</span>
+          ))}
+        </div>
+        
+        <div className="pt-3 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center mt-2">
+           <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
+           
+           <div className="flex items-center gap-2">
+               {isPersonal && (
+                 <div 
+                    onClick={(e) => handleTogglePublic(e, prompt)}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full cursor-pointer transition-colors backdrop-blur-sm ${prompt.isPublic ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-slate-700/50 text-slate-400 border border-slate-600'}`}
+                    title={prompt.isPublic ? "已公开" : "私有"}
+                 >
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="text-[10px]">{prompt.isPublic ? '公开' : '私有'}</span>
+                 </div>
+               )}
+               <div className="flex items-center gap-1 group-hover:translate-x-1 transition-transform text-accent">
+                  <Icons.ChevronRight className="w-3 h-3" />
+               </div>
+           </div>
+        </div>
+      </div>
+    </div>
+    );
+  };
 
   const getTitle = () => {
       if (category === 'visual') return '视觉画廊';
@@ -512,78 +613,41 @@ const Library = ({ user }: { user: User }) => {
            <Icons.Refresh className="w-8 h-8 animate-spin mb-4 opacity-50" />
            正在加载灵感库...
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-20 bg-slate-900/50 rounded-xl border border-slate-800 border-dashed">
-           <Icons.Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-           <p className="text-slate-400">
-               {category ? '此分类下暂无提示词。' : '暂无提示词。'}
-               开始创作吧！
-           </p>
-           {search && <button onClick={() => setSearch('')} className="mt-4 text-accent text-sm hover:underline">清除搜索</button>}
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(prompt => {
-            // Find background image from the first version that has one
-            const bgImage = prompt.versions?.find(v => v.imageUrl)?.imageUrl;
-
-            return (
-            <div 
-              key={prompt.id} 
-              onClick={() => navigate(`/prompt/${prompt.id}`)}
-              className="bg-panel border border-slate-700 rounded-xl p-4 hover:border-slate-500 transition-all cursor-pointer group relative flex flex-col h-48 overflow-hidden shadow-lg hover:shadow-xl"
-            >
-              {/* Background Image with Overlay */}
-              {bgImage && (
-                  <>
-                    <div 
-                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-80"
-                        style={{ backgroundImage: `url(${bgImage})` }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-900/40" />
-                  </>
-              )}
-
-              {/* Content relative z-10 */}
-              <div className="relative z-10 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-3">
-                  <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm ${
-                    prompt.type === PromptType.IMAGE || prompt.type === PromptType.VIDEO_PLAN 
-                      ? 'bg-indigo-900/80 text-indigo-300 border border-indigo-500/30' 
-                      : 'bg-emerald-900/80 text-emerald-300 border border-emerald-500/30'
-                  }`}>
-                    {prompt.type === PromptType.VIDEO_PLAN ? '视频' : prompt.type === PromptType.IMAGE ? '绘画' : '文本'}
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleDelete(e, prompt.id)}
-                    onMouseDown={(e) => e.stopPropagation()} 
-                    className="text-slate-400 hover:text-red-400 hover:bg-red-500/20 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm bg-slate-900/50"
-                    title="删除提示词"
-                  >
-                    <Icons.Trash className="w-4 h-4" />
-                  </button>
-                </div>
-                
-                <h3 className="font-bold text-white mb-2 line-clamp-2 drop-shadow-md text-lg">{prompt.title}</h3>
-                
-                <div className="flex flex-wrap gap-1 mb-auto">
-                  {prompt.tags.slice(0, 3).map(t => (
-                    <span key={t} className="text-[10px] bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 px-1.5 py-0.5 rounded">{t}</span>
-                  ))}
-                </div>
-                
-                <div className="pt-3 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center mt-2">
-                   <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
-                   <div className="flex items-center gap-1 group-hover:translate-x-1 transition-transform text-accent">
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-medium">打开</span>
-                      <Icons.ChevronRight className="w-3 h-3" />
-                   </div>
-                </div>
-              </div>
+        <div className="space-y-12">
+            {/* Personal Library */}
+            <div>
+                <h3 className="text-xl font-bold text-slate-300 mb-4 flex items-center gap-2">
+                    <Icons.User className="w-5 h-5 text-accent" />
+                    个人灵感库
+                </h3>
+                {filteredPersonal.length === 0 ? (
+                    <div className="text-center py-10 bg-slate-900/30 rounded-xl border border-slate-800 border-dashed">
+                        <p className="text-slate-500 text-sm">暂无个人提示词。</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredPersonal.map(prompt => renderCard(prompt, true))}
+                    </div>
+                )}
             </div>
-            );
-          })}
+
+            {/* Public Library */}
+            <div className="pt-8 border-t border-slate-700/50">
+                <h3 className="text-xl font-bold text-slate-300 mb-4 flex items-center gap-2">
+                    <Icons.Globe className="w-5 h-5 text-blue-400" />
+                    公开灵感库
+                </h3>
+                {filteredPublic.length === 0 ? (
+                    <div className="text-center py-10 bg-slate-900/30 rounded-xl border border-slate-800 border-dashed">
+                        <p className="text-slate-500 text-sm">暂无公开提示词。</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredPublic.map(prompt => renderCard(prompt, false))}
+                    </div>
+                )}
+            </div>
         </div>
       )}
     </div>
@@ -615,6 +679,19 @@ const PromptDetail = ({ user }: { user: User }) => {
     setPrompt(updated);
   };
 
+  const handleClone = async () => {
+    if (!prompt) return;
+    if (!window.confirm("确定要克隆这个提示词到您的灵感库吗？")) return;
+
+    try {
+        const cloned = await apiService.clonePrompt(prompt.id);
+        navigate(`/prompt/${cloned.id}`);
+        alert("克隆成功！已为您打开副本。");
+    } catch (err: any) {
+        alert(apiService.getErrorMessage(err));
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center h-full text-slate-500">加载提示词中...</div>;
   if (!prompt) return (
     <div className="flex flex-col items-center justify-center h-full text-slate-500">
@@ -624,21 +701,40 @@ const PromptDetail = ({ user }: { user: User }) => {
   );
 
   const isReasoning = prompt.type === PromptType.TEXT;
+  const isOwner = prompt.userId === user.id;
 
   return (
     <div className="h-full flex flex-col">
-       <div className="flex items-center gap-2 px-4 md:px-6 py-3 border-b border-slate-700 bg-panel shrink-0">
-         <button onClick={() => navigate('/library')} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors">
-           <Icons.ChevronLeft className="w-5 h-5" />
-         </button>
-         <h1 className="font-semibold text-white truncate max-w-xs md:max-w-xl">{prompt.title}</h1>
+       <div className="flex items-center gap-2 px-4 md:px-6 py-3 border-b border-slate-700 bg-panel shrink-0 justify-between">
+         <div className="flex items-center gap-2 overflow-hidden">
+            <button onClick={() => navigate('/library')} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors shrink-0">
+            <Icons.ChevronLeft className="w-5 h-5" />
+            </button>
+            <h1 className="font-semibold text-white truncate max-w-xs md:max-w-xl">{prompt.title}</h1>
+            {!isOwner && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] shrink-0">
+                    公开预览
+                </span>
+            )}
+         </div>
+
+         {!isOwner && (
+             <button 
+                onClick={handleClone}
+                className="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0"
+             >
+                <Icons.Copy className="w-4 h-4" />
+                <span className="hidden md:inline">克隆到我的灵感库</span>
+                <span className="md:hidden">克隆</span>
+             </button>
+         )}
        </div>
        
        <div className={`flex-1 ${isReasoning ? 'overflow-hidden' : 'overflow-y-auto'} p-4 md:p-6 relative`}>
          {isReasoning ? (
-            <ChatInterface promptItem={prompt} onUpdate={handleUpdate} />
+            <ChatInterface promptItem={prompt} onUpdate={handleUpdate} readOnly={!isOwner} />
          ) : (
-            <ImageCanvas promptItem={prompt} onUpdate={handleUpdate} />
+            <ImageCanvas promptItem={prompt} onUpdate={handleUpdate} readOnly={!isOwner} />
          )}
        </div>
     </div>

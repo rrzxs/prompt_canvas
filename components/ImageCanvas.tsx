@@ -8,6 +8,7 @@ import { apiService } from '../services/apiService';
 interface ImageCanvasProps {
   promptItem: PromptItem;
   onUpdate: (updatedItem: PromptItem) => void;
+  readOnly?: boolean;
 }
 
 interface ViewState {
@@ -38,7 +39,7 @@ const CARD_WIDTH = 400;
 const CARD_GAP = 50;
 const SNAP_THRESHOLD = 15; // Pixels distance to trigger snap
 
-export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }) => {
+export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, readOnly = false }) => {
   const [currentItem, setCurrentItem] = useState<PromptItem>(promptItem);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -534,6 +535,13 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
         {/* Spacer */}
         <div className="h-6 w-full shrink-0"></div>
 
+        {readOnly ? (
+            <div className="w-full max-w-lg bg-panel/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center pointer-events-auto">
+                <p className="text-slate-300 font-medium">此为公开预览模式，无法生成图片</p>
+                <p className="text-slate-500 text-sm mt-2">请点击右上角“克隆”按钮，将此提示词添加到您的灵感库后继续创作。</p>
+            </div>
+        ) : (
+        <>
         {/* The Box */}
         <div className="w-full max-w-4xl bg-panel/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-1 flex flex-col pointer-events-auto relative">
           
@@ -614,6 +622,8 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate }
              <Icons.ChevronUp className="w-5 h-5" />
            )}
         </button>
+        </>
+        )}
       </div>
 
       {/* --- Full Screen Editor Modal --- */}

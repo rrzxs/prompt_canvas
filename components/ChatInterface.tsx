@@ -6,9 +6,10 @@ import { apiService } from '../services/apiService';
 interface ChatInterfaceProps {
   promptItem: PromptItem;
   onUpdate: (updatedItem: PromptItem) => void;
+  readOnly?: boolean;
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpdate }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpdate, readOnly = false }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(promptItem.chatHistory || []);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -161,6 +162,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
 
       {/* Input Area */}
       <div className="p-4 bg-slate-800/30 border-t border-slate-700">
+        {readOnly ? (
+            <div className="text-center p-4 text-slate-500 bg-slate-900/50 rounded-lg border border-slate-700 border-dashed">
+                <p>此为公开预览模式，无法直接对话。</p>
+                <p className="text-xs mt-1">请点击右上角“克隆”按钮，将此提示词添加到您的灵感库后继续使用。</p>
+            </div>
+        ) : (
+        <>
         {/* Attachment Previews in Input */}
         {activeAttachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2 px-1">
@@ -217,6 +225,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
             <Icons.Send className="w-5 h-5" />
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

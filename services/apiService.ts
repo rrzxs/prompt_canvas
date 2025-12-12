@@ -170,10 +170,27 @@ class ApiService {
   }
 
   /**
+   * 获取公开提示词列表
+   */
+  async getPublicPrompts(category?: string): Promise<PromptItem[]> {
+    const params = category ? { category } : {};
+    const response = await this.client.get<PromptItem[]>('/api/prompts/public', { params });
+    return response.data;
+  }
+
+  /**
    * 获取单个提示词详情
    */
   async getPrompt(id: string): Promise<PromptItem> {
     const response = await this.client.get<PromptItem>(`/api/prompts/${id}`);
+    return response.data;
+  }
+
+  /**
+   * 克隆提示词
+   */
+  async clonePrompt(id: string): Promise<PromptItem> {
+    const response = await this.client.post<PromptItem>(`/api/prompts/${id}/clone`);
     return response.data;
   }
 

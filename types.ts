@@ -39,6 +39,7 @@ export interface PromptItem {
   userId: string;
   title: string; // Auto-generated or first few words
   type: PromptType;
+  isPublic: boolean;
   createdAt: number;
   updatedAt: number;
   tags: string[];

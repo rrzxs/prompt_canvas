@@ -40,7 +40,9 @@ import {
   ChevronDown,
   Menu,
   Upload,
-  Paperclip
+  Paperclip,
+  User,
+  Globe
 } from 'lucide-react';
 
 export const Icons = {
@@ -84,5 +86,7 @@ export const Icons = {
   Edit,
   Menu,
   Upload,
-  Paperclip
+  Paperclip,
+  User,
+  Globe
 };
