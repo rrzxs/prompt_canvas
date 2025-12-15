@@ -192,6 +192,12 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
       // 使用 apiService 添加版本
       const createdVersion = await apiService.addVersion(currentItem.id, newVersion);
 
+      // 确保本地状态包含 videoSettings（以防后端返回不完整）
+      const finalVersion = {
+        ...createdVersion,
+        videoSettings: settings
+      };
+
       // 更新提示词类型为 VIDEO_PLAN
       await apiService.updatePrompt(currentItem.id, { type: 'VIDEO_PLAN' as any });
 
@@ -200,7 +206,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
         updatedAt: Date.now(),
         type: 'VIDEO_PLAN' as any, 
         activeVersionId: createdVersion.id,
-        versions: [...currentItem.versions, createdVersion],
+        versions: [...currentItem.versions, finalVersion],
         draftText: undefined
       };
 
@@ -491,10 +497,40 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
     setTimeout(handleResetView, 50);
   };
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      // 优先尝试使用 Clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // 回退方案：使用 document.execCommand (兼容非安全上下文，如 HTTP)
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // 确保 textarea 不可见但属于 DOM 的一部分以进行选区操作
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          if (!successful) {
+             throw new Error('execCommand copy failed');
+          }
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
   };
 
   const downloadImage = (dataUrl: string, filename: string) => {
