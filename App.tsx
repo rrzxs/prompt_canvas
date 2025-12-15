@@ -636,7 +636,7 @@ const Library = ({ user }: { user: User }) => {
             <div className="pt-8 border-t border-slate-700/50">
                 <h3 className="text-xl font-bold text-slate-300 mb-4 flex items-center gap-2">
                     <Icons.Globe className="w-5 h-5 text-blue-400" />
-                    公开灵感库
+                    灵感广场
                 </h3>
                 {filteredPublic.length === 0 ? (
                     <div className="text-center py-10 bg-slate-900/30 rounded-xl border border-slate-800 border-dashed">
@@ -659,6 +659,8 @@ const PromptDetail = ({ user }: { user: User }) => {
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState<PromptItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
+  const [cloneName, setCloneName] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -679,14 +681,19 @@ const PromptDetail = ({ user }: { user: User }) => {
     setPrompt(updated);
   };
 
-  const handleClone = async () => {
+  const handleClone = () => {
     if (!prompt) return;
-    if (!window.confirm("确定要克隆这个提示词到您的灵感库吗？")) return;
+    setCloneName(`${prompt.title} (副本)`);
+    setIsCloneModalOpen(true);
+  };
 
+  const confirmClone = async () => {
+    if (!prompt) return;
+    
     try {
-        const cloned = await apiService.clonePrompt(prompt.id);
+        setIsCloneModalOpen(false);
+        const cloned = await apiService.clonePrompt(prompt.id, cloneName);
         navigate(`/prompt/${cloned.id}`);
-        alert("克隆成功！已为您打开副本。");
     } catch (err: any) {
         alert(apiService.getErrorMessage(err));
     }
@@ -705,6 +712,44 @@ const PromptDetail = ({ user }: { user: User }) => {
 
   return (
     <div className="h-full flex flex-col">
+       {isCloneModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-panel border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-4">克隆提示词</h3>
+            <div className="mb-6">
+              <label className="block text-slate-400 text-sm mb-2">
+                副本名称
+              </label>
+              <input
+                type="text"
+                value={cloneName}
+                onChange={(e) => setCloneName(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-accent focus:outline-none"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmClone();
+                  if (e.key === 'Escape') setIsCloneModalOpen(false);
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsCloneModalOpen(false)}
+                className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmClone}
+                disabled={!cloneName.trim()}
+                className="bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                确认克隆
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
        <div className="flex items-center gap-2 px-4 md:px-6 py-3 border-b border-slate-700 bg-panel shrink-0 justify-between">
          <div className="flex items-center gap-2 overflow-hidden">
             <button onClick={() => navigate('/library')} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors shrink-0">
