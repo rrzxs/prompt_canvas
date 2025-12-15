@@ -475,7 +475,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
         return {
             ...v,
             x: direction === 'horizontal' ? startX + (idx * (CARD_WIDTH + CARD_GAP)) : startX,
-            y: direction === 'horizontal' ? startY : startY + (idx * 600)
+            y: direction === 'horizontal' ? startY : startY + (idx * (CARD_WIDTH + CARD_GAP)) // 使用与横向相同的间距逻辑 (450px)，更紧凑
         };
     });
 
