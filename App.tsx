@@ -657,7 +657,7 @@ const PromptDetail = ({ user }: { user: User | null }) => {
   const isOwner = user ? prompt.userId === user.id : false;
 
   return (
-    <div className="h-full flex flex-col bg-canvas text-slate-200">
+    <div className="flex flex-col h-full bg-canvas text-slate-200">
        {isCloneModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-panel border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
@@ -733,7 +733,7 @@ const PromptDetail = ({ user }: { user: User | null }) => {
          </div>
        </div>
        
-       <div className={`flex-1 ${isReasoning ? 'overflow-hidden' : 'overflow-y-auto'} p-4 md:p-6 relative`}>
+       <div className={`flex-1 relative ${isReasoning ? 'overflow-hidden p-4 md:p-6' : 'overflow-hidden'}`}>
          {isReasoning ? (
             <ChatInterface promptItem={prompt} onUpdate={handleUpdate} readOnly={!isOwner} />
          ) : (
@@ -871,7 +871,9 @@ const App = () => {
                     <PromptDetail user={user} />
                 </AuthenticatedLayout>
             ) : (
-                <PromptDetail user={null} />
+                <div className="h-screen w-full bg-canvas">
+                    <PromptDetail user={null} />
+                </div>
             )
         } />
 

@@ -65,6 +65,7 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
   
   const containerRef = useRef<HTMLDivElement>(null);
   const processedDraftIdRef = useRef<string | null>(null);
+  const lastFittedPromptId = useRef<string | null>(null);
 
   // Helper for regeneration that can be called from effect
   const handleRegenerate = async (textOverride?: string) => {
@@ -463,6 +464,20 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
 
     setView({ x: newX, y: newY, scale: newScale });
   }, [currentItem.versions]);
+
+  // Auto-fit view when entering a new prompt
+  useEffect(() => {
+    if (promptItem.id !== lastFittedPromptId.current && currentItem.versions.length > 0) {
+       // Wait for layout to be stable
+       const timer = setTimeout(() => {
+           if (containerRef.current) {
+               handleResetView();
+               lastFittedPromptId.current = promptItem.id;
+           }
+       }, 100);
+       return () => clearTimeout(timer);
+    }
+  }, [promptItem.id, currentItem.versions, handleResetView]);
 
 
   const alignVersions = async (direction: 'horizontal' | 'vertical') => {
