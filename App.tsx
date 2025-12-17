@@ -179,7 +179,8 @@ const SettingsPage = ({ user }: { user: User }) => {
 };
 
 const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
-  const [isRegister, setIsRegister] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [isRegister, setIsRegister] = useState(searchParams.get('mode') === 'register');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
