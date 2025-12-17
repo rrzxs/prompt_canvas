@@ -60,7 +60,8 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user.username}</p>
-            <p className="text-xs text-slate-500">免费版 ({version})</p>
+            <p className="text-xs text-slate-500">内部试玩版 ({version})</p>
+            <a href="https://www.rrzxs.com" target="_blank" rel="noreferrer" className="text-[10px] text-slate-500 hover:text-accent truncate block mt-0.5">人人智学社出品</a>
           </div>
         </div>
         <button onClick={onLogout} className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 px-2 py-1 text-xs transition-colors">

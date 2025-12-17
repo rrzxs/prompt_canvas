@@ -160,9 +160,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ user }) => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 py-8 bg-slate-900/50">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
-          <p>© 2024 观想阁 (Prompt Canvas). All rights reserved.</p>
+      <footer className="border-t border-slate-800 py-12 bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-2">
+             {/* <div className="flex items-center gap-3 text-slate-400 mb-2">
+               <span>出品方：</span>
+               <a 
+                 href="https://www.rrzxs.com" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 className="text-accent hover:text-accent-hover font-medium transition-colors flex items-center gap-1"
+               >
+                 人人智学社
+                 <Icons.ExternalLink className="w-3 h-3" />
+               </a>
+               <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-400 border border-slate-700 select-none">
+                 内部试玩版
+               </span>
+             </div> */}
+             <p className="text-slate-500 text-sm" onClick={() => window.open('https://www.rrzxs.com', '_blank')}>© 2025 观想阁·人人智学社. All rights reserved.</p>
+          </div>
+          
+          <div className="max-w-3xl text-center border-t border-slate-800/50 pt-6 mt-2">
+             <p className="text-xs text-slate-600 leading-relaxed">
+               <strong>免责声明：</strong>本服务生成的任何内容（包括但不限于文本、图像、代码）均由人工智能模型自动生成，仅供参考、学习和娱乐使用。
+               生成内容不代表平台立场，不构成任何专业建议（如法律、医疗、金融等）。
+             </p>
+          </div>
         </div>
       </footer>
     </div>
