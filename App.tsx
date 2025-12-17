@@ -179,6 +179,7 @@ const SettingsPage = ({ user }: { user: User }) => {
 };
 
 const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isRegister, setIsRegister] = useState(searchParams.get('mode') === 'register');
   const [username, setUsername] = useState('');
@@ -231,6 +232,15 @@ const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
 
   return (
     <div className="h-screen w-full flex items-center justify-center bg-canvas relative overflow-hidden">
+       <div className="absolute top-4 left-4 z-20">
+         <button 
+           onClick={() => navigate('/')}
+           className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-slate-800"
+         >
+           <Icons.ChevronLeft className="w-5 h-5" />
+           返回首页
+         </button>
+       </div>
        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
        <div className="w-full max-w-md bg-panel border border-slate-700 p-8 rounded-2xl shadow-2xl relative z-10 mx-4">
          <div className="text-center mb-8">
