@@ -4,6 +4,8 @@ import { Icons } from './components/Icons';
 import { User, PromptItem, PromptType } from './types';
 import { ImageCanvas } from './components/ImageCanvas';
 import { ChatInterface } from './components/ChatInterface';
+import { LandingPage } from './components/LandingPage';
+import { PromptCard } from './components/PromptCard';
 import { apiService } from './services/apiService';
 
 // ... (Sidebar, SettingsPage, LoginPage, Dashboard components remain unchanged)
@@ -491,83 +493,6 @@ const Library = ({ user }: { user: User }) => {
     }
   }
 
-  const renderCard = (prompt: PromptItem, isPersonal: boolean) => {
-    // Find background image from the first version that has one
-    const bgImage = prompt.versions?.find(v => v.imageUrl)?.imageUrl;
-
-    return (
-    <div 
-      key={prompt.id} 
-      onClick={() => navigate(`/prompt/${prompt.id}`)}
-      className="bg-panel border border-slate-700 rounded-xl p-4 hover:border-slate-500 transition-all cursor-pointer group relative flex flex-col h-48 overflow-hidden shadow-lg hover:shadow-xl"
-    >
-      {/* Background Image with Overlay */}
-      {bgImage && (
-          <>
-            <div 
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-80"
-                style={{ backgroundImage: `url(${bgImage})` }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-900/40" />
-          </>
-      )}
-
-      {/* Content relative z-10 */}
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="flex justify-between items-start mb-3">
-          <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-sm ${
-            prompt.type === PromptType.IMAGE || prompt.type === PromptType.VIDEO_PLAN 
-              ? 'bg-indigo-900/80 text-indigo-300 border border-indigo-500/30' 
-              : 'bg-emerald-900/80 text-emerald-300 border border-emerald-500/30'
-          }`}>
-            {prompt.type === PromptType.VIDEO_PLAN ? '视频' : prompt.type === PromptType.IMAGE ? '绘画' : '文本'}
-          </div>
-          
-          {isPersonal && (
-              <button 
-                type="button"
-                onClick={(e) => handleDelete(e, prompt.id)}
-                onMouseDown={(e) => e.stopPropagation()} 
-                className="text-slate-400 hover:text-red-400 hover:bg-red-500/20 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm bg-slate-900/50"
-                title="删除提示词"
-              >
-                <Icons.Trash className="w-4 h-4" />
-              </button>
-          )}
-        </div>
-        
-        <h3 className="font-bold text-white mb-2 line-clamp-2 drop-shadow-md text-lg">{prompt.title}</h3>
-        
-        <div className="flex flex-wrap gap-1 mb-auto">
-          {prompt.tags.slice(0, 3).map(t => (
-            <span key={t} className="text-[10px] bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-300 px-1.5 py-0.5 rounded">{t}</span>
-          ))}
-        </div>
-        
-        <div className="pt-3 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center mt-2">
-           <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
-           
-           <div className="flex items-center gap-2">
-               {isPersonal && (
-                 <div 
-                    onClick={(e) => handleTogglePublic(e, prompt)}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full cursor-pointer transition-colors backdrop-blur-sm ${prompt.isPublic ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-slate-700/50 text-slate-400 border border-slate-600'}`}
-                    title={prompt.isPublic ? "已公开" : "私有"}
-                 >
-                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                    <span className="text-[10px]">{prompt.isPublic ? '公开' : '私有'}</span>
-                 </div>
-               )}
-               <div className="flex items-center gap-1 group-hover:translate-x-1 transition-transform text-accent">
-                  <Icons.ChevronRight className="w-3 h-3" />
-               </div>
-           </div>
-        </div>
-      </div>
-    </div>
-    );
-  };
-
   const getTitle = () => {
       if (category === 'visual') return '视觉画廊';
       if (category === 'text') return '思维实验室';
@@ -627,7 +552,15 @@ const Library = ({ user }: { user: User }) => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredPersonal.map(prompt => renderCard(prompt, true))}
+                        {filteredPersonal.map(prompt => (
+                          <PromptCard
+                            key={prompt.id}
+                            prompt={prompt}
+                            isPersonal={true}
+                            onDelete={handleDelete}
+                            onTogglePublic={handleTogglePublic}
+                          />
+                        ))}
                     </div>
                 )}
             </div>
@@ -644,7 +577,13 @@ const Library = ({ user }: { user: User }) => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredPublic.map(prompt => renderCard(prompt, false))}
+                        {filteredPublic.map(prompt => (
+                          <PromptCard
+                            key={prompt.id}
+                            prompt={prompt}
+                            isPersonal={false}
+                          />
+                        ))}
                     </div>
                 )}
             </div>
@@ -654,7 +593,7 @@ const Library = ({ user }: { user: User }) => {
   );
 };
 
-const PromptDetail = ({ user }: { user: User }) => {
+const PromptDetail = ({ user }: { user: User | null }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState<PromptItem | null>(null);
@@ -683,6 +622,12 @@ const PromptDetail = ({ user }: { user: User }) => {
 
   const handleClone = () => {
     if (!prompt) return;
+    if (!user) {
+        if(window.confirm('您需要登录才能克隆提示词。是否前往登录？')) {
+            navigate('/login');
+        }
+        return;
+    }
     setCloneName(`${prompt.title} (副本)`);
     setIsCloneModalOpen(true);
   };
@@ -703,15 +648,15 @@ const PromptDetail = ({ user }: { user: User }) => {
   if (!prompt) return (
     <div className="flex flex-col items-center justify-center h-full text-slate-500">
       <p className="mb-4">未找到提示词。</p>
-      <button onClick={() => navigate('/library')} className="text-accent hover:underline">返回灵感库</button>
+      <button onClick={() => user ? navigate('/library') : navigate('/')} className="text-accent hover:underline">返回{user ? '灵感库' : '首页'}</button>
     </div>
   );
 
   const isReasoning = prompt.type === PromptType.TEXT;
-  const isOwner = prompt.userId === user.id;
+  const isOwner = user ? prompt.userId === user.id : false;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-canvas text-slate-200">
        {isCloneModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-panel border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
@@ -750,9 +695,11 @@ const PromptDetail = ({ user }: { user: User }) => {
           </div>
         </div>
       )}
+       
+       {/* Header */}
        <div className="flex items-center gap-2 px-4 md:px-6 py-3 border-b border-slate-700 bg-panel shrink-0 justify-between">
          <div className="flex items-center gap-2 overflow-hidden">
-            <button onClick={() => navigate('/library')} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors shrink-0">
+            <button onClick={() => user ? navigate('/library') : navigate('/')} className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors shrink-0">
             <Icons.ChevronLeft className="w-5 h-5" />
             </button>
             <h1 className="font-semibold text-white truncate max-w-xs md:max-w-xl">{prompt.title}</h1>
@@ -763,16 +710,26 @@ const PromptDetail = ({ user }: { user: User }) => {
             )}
          </div>
 
-         {!isOwner && (
-             <button 
-                onClick={handleClone}
-                className="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0"
-             >
-                <Icons.Copy className="w-4 h-4" />
-                <span className="hidden md:inline">克隆到我的灵感库</span>
-                <span className="md:hidden">克隆</span>
-             </button>
-         )}
+         <div className="flex items-center gap-2">
+             {!user && (
+                 <button 
+                    onClick={() => navigate('/login')}
+                    className="text-slate-400 hover:text-white text-sm mr-2 hidden md:block"
+                 >
+                    登录
+                 </button>
+             )}
+             {!isOwner && (
+                 <button 
+                    onClick={handleClone}
+                    className="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0"
+                 >
+                    <Icons.Copy className="w-4 h-4" />
+                    <span className="hidden md:inline">克隆{user ? '到我的灵感库' : ''}</span>
+                    <span className="md:hidden">克隆</span>
+                 </button>
+             )}
+         </div>
        </div>
        
        <div className={`flex-1 ${isReasoning ? 'overflow-hidden' : 'overflow-y-auto'} p-4 md:p-6 relative`}>
@@ -787,7 +744,7 @@ const PromptDetail = ({ user }: { user: User }) => {
 };
 
 // ... (AuthenticatedLayout and App components remain unchanged)
-const AuthenticatedLayout = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
+const AuthenticatedLayout = ({ user, onLogout, children }: { user: User, onLogout: () => void, children: React.ReactNode }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -832,13 +789,7 @@ const AuthenticatedLayout = ({ user, onLogout }: { user: User, onLogout: () => v
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden relative h-full transition-all duration-500 w-full">
-         <Routes>
-            <Route path="/dashboard" element={<Dashboard user={user} />} />
-            <Route path="/library" element={<Library user={user} />} />
-            <Route path="/settings" element={<SettingsPage user={user} />} />
-            <Route path="/prompt/:id" element={<PromptDetail user={user} />} />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-         </Routes>
+         {children}
       </main>
     </div>
   );
@@ -884,15 +835,47 @@ const App = () => {
   return (
     <HashRouter>
       <Routes>
+        <Route path="/" element={<LandingPage user={user} />} />
         <Route path="/login" element={!user ? <LoginPage onLogin={setUser} /> : <Navigate to="/dashboard" />} />
-        <Route 
-          path="/*" 
-          element={user ? (
-             <AuthenticatedLayout user={user} onLogout={handleLogout} />
-          ) : (
-             <Navigate to="/login" />
-          )} 
-        />
+        
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={
+            user ? (
+                <AuthenticatedLayout user={user} onLogout={handleLogout}>
+                    <Dashboard user={user} />
+                </AuthenticatedLayout>
+            ) : <Navigate to="/login" />
+        } />
+        
+        <Route path="/library" element={
+            user ? (
+                <AuthenticatedLayout user={user} onLogout={handleLogout}>
+                    <Library user={user} />
+                </AuthenticatedLayout>
+            ) : <Navigate to="/login" />
+        } />
+        
+        <Route path="/settings" element={
+            user ? (
+                <AuthenticatedLayout user={user} onLogout={handleLogout}>
+                    <SettingsPage user={user} />
+                </AuthenticatedLayout>
+            ) : <Navigate to="/login" />
+        } />
+
+        {/* Prompt Detail - Public or Private */}
+        <Route path="/prompt/:id" element={
+            user ? (
+                <AuthenticatedLayout user={user} onLogout={handleLogout}>
+                    <PromptDetail user={user} />
+                </AuthenticatedLayout>
+            ) : (
+                <PromptDetail user={null} />
+            )
+        } />
+
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/"} />} />
       </Routes>
     </HashRouter>
   );
