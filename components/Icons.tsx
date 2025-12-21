@@ -42,7 +42,8 @@ import {
   Upload,
   Paperclip,
   User,
-  Globe
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 
 export const Icons = {
@@ -88,5 +89,6 @@ export const Icons = {
   Upload,
   Paperclip,
   User,
-  Globe
+  Globe,
+  ExternalLink
 };
