@@ -189,8 +189,8 @@ class ApiService {
   /**
    * 克隆提示词
    */
-  async clonePrompt(id: string): Promise<PromptItem> {
-    const response = await this.client.post<PromptItem>(`/api/prompts/${id}/clone`);
+  async clonePrompt(id: string, title?: string): Promise<PromptItem> {
+    const response = await this.client.post<PromptItem>(`/api/prompts/${id}/clone`, { title });
     return response.data;
   }
 
