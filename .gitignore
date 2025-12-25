@@ -1,4 +1,4 @@
-# Logs
+# 日志文件
 logs
 *.log
 npm-debug.log*
@@ -7,13 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# 构建输出
 node_modules
 dist
 dist-ssr
 
+# 测试相关文件
+test_*.html
+*_test.js
+*_test.ts
+*_test.tsx
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
 # 环境变量文件（包含本地配置）
 *.local
 .env.local
+.env
 
 # Editor directories and files
 .vscode/*
