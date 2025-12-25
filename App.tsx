@@ -82,9 +82,9 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
         </div>
 
         {/* 积分信息区域 - 简化版 */}
-        <div className="bg-slate-900/40 rounded-lg p-3 mb-3 border border-slate-700/30">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
+        <div className="bg-slate-900/30 rounded-lg p-2.5 mb-3 border border-slate-700/20">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
               <Icons.Coins className="w-3 h-3" />
               积分
             </span>

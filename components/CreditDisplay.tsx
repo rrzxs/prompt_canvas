@@ -197,23 +197,23 @@ export const CreditDisplay: React.FC<CreditDisplayProps> = ({
   return (
     <div className={`${className}`}>
       <div className="flex items-center justify-between">
-        {/* 左侧：积分数值 */}
-        <div className="flex items-center gap-3">
-          <StatusIcon className={`w-5 h-5 ${statusColor}`} />
+        {/* 左侧：积分数值 - 简化版 */}
+        <div className="flex items-center gap-2">
+          <StatusIcon className={`w-4 h-4 ${statusColor}`} />
           <div className="flex items-baseline gap-1">
-            <span className={`text-lg font-bold ${statusColor}`}>
+            <span className={`text-base font-medium ${statusColor}`}>
               {creditBalance.current_balance}
             </span>
-            <span className="text-sm text-slate-500">
+            <span className="text-xs text-slate-500">
               / {creditBalance.daily_limit}
             </span>
           </div>
         </div>
         
-        {/* 右侧：积分进度条 */}
+        {/* 右侧：积分进度条 - 更小更简洁 */}
         {showDetails && (
-          <div className="flex flex-col items-end gap-1">
-            <div className="w-20 h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
               <div 
                 className={`h-full transition-all duration-500 ${
                   percentage >= 50 ? 'bg-emerald-400' : 
