@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PromptItem, ChatMessage, Attachment } from '../types';
 import { Icons } from './Icons';
+import { CreditCheck, CreditInsufficientModal } from './CreditCheck';
 import { apiService } from '../services/apiService';
 
 interface ChatInterfaceProps {
@@ -14,6 +15,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [activeAttachments, setActiveAttachments] = useState<Attachment[]>([]);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [creditCheckResult, setCreditCheckResult] = useState<any>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,6 +56,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
       const updatedItem = { ...promptItem, chatHistory: finalHistory, updatedAt: Date.now() };
       await apiService.updatePrompt(promptItem.id, { chatHistory: finalHistory });
       onUpdate(updatedItem);
+
+      // 触发积分更新事件
+      window.dispatchEvent(new CustomEvent('creditUpdated'));
 
     } catch (error: any) {
       console.error(error);
@@ -217,15 +223,51 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ promptItem, onUpda
             style={{ height: 'auto', minHeight: '56px' }} 
           />
           
-          <button 
-            onClick={handleSend}
-            disabled={isTyping || (!input.trim() && activeAttachments.length === 0)}
-            className="w-14 h-10 mb-1 flex items-center justify-center bg-accent hover:bg-accent-hover rounded-xl text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end"
-          >
-            <Icons.Send className="w-5 h-5" />
-          </button>
+          <CreditCheck serviceType="text_chat" onCreditCheck={setCreditCheckResult}>
+            {({ sufficient, cost, checking, error, checkResult }) => (
+              <button 
+                onClick={() => {
+                  if (sufficient) {
+                    handleSend();
+                  } else if (checkResult) {
+                    setCreditCheckResult(checkResult);
+                    setShowCreditModal(true);
+                  }
+                }}
+                disabled={isTyping || (!input.trim() && activeAttachments.length === 0) || checking || !sufficient}
+                className={`w-14 h-10 mb-1 flex items-center justify-center rounded-xl text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-end relative ${
+                  sufficient 
+                    ? 'bg-accent hover:bg-accent-hover' 
+                    : 'bg-slate-600'
+                }`}
+                title={!sufficient ? `积分不足，需要${cost}积分` : `消耗${cost}积分发送消息`}
+              >
+                {checking ? (
+                  <Icons.Clock className="w-5 h-5" />
+                ) : (
+                  <Icons.Send className="w-5 h-5" />
+                )}
+                {/* 积分数量显示 */}
+                <span className="absolute -top-1 -right-1 bg-slate-800 text-xs px-1 py-0.5 rounded text-slate-300 border border-slate-600 font-mono">
+                  {cost}
+                </span>
+              </button>
+            )}
+          </CreditCheck>
         </div>
         </>
+        )}
+        
+        {showCreditModal && creditCheckResult && (
+          <CreditInsufficientModal
+            isOpen={showCreditModal}
+            onClose={() => setShowCreditModal(false)}
+            checkResult={creditCheckResult}
+            onRetry={() => {
+              // 重新检查积分后再次尝试发送
+              handleSend();
+            }}
+          />
         )}
       </div>
     </div>

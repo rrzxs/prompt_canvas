@@ -5,7 +5,11 @@ import {
   PromptVersion, 
   ChatMessage, 
   Attachment,
-  VideoSettings 
+  VideoSettings,
+  CreditBalance,
+  CreditHistory,
+  ServiceCosts,
+  CreditCheckResult
 } from '../types';
 
 // API 基础配置
@@ -359,6 +363,46 @@ class ApiService {
    */
   getImageUrl(filename: string): string {
     return `${API_BASE_URL}/api/files/${filename}`;
+  }
+
+  // ==================== 积分 API ====================
+
+  /**
+   * 获取用户积分余额
+   */
+  async getCreditBalance(): Promise<CreditBalance> {
+    const response = await this.client.get<CreditBalance>('/api/credits/balance');
+    return response.data;
+  }
+
+  /**
+   * 获取积分使用历史
+   */
+  async getCreditHistory(days: number = 30, operationType?: string): Promise<CreditHistory> {
+    const params: any = { days };
+    if (operationType) {
+      params.operation_type = operationType;
+    }
+    const response = await this.client.get<CreditHistory>('/api/credits/history', { params });
+    return response.data;
+  }
+
+  /**
+   * 检查积分是否足够
+   */
+  async checkCreditAvailability(cost: number, serviceType: string): Promise<CreditCheckResult> {
+    const response = await this.client.get<CreditCheckResult>('/api/credits/check', {
+      params: { cost, service_type: serviceType }
+    });
+    return response.data;
+  }
+
+  /**
+   * 获取服务积分消耗配置
+   */
+  async getServiceCosts(): Promise<ServiceCosts> {
+    const response = await this.client.get<ServiceCosts>('/api/credits/services/costs');
+    return response.data;
   }
 
   /**

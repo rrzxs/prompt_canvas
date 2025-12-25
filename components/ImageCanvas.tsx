@@ -3,6 +3,7 @@ import { PromptItem, PromptVersion, VideoSettings, Attachment } from '../types';
 import { Icons } from './Icons';
 import { DiffViewer } from './DiffViewer';
 import { VideoModal } from './VideoModal';
+import { CreditCheck, CreditInsufficientModal } from './CreditCheck';
 import { apiService } from '../services/apiService';
 
 interface ImageCanvasProps {
@@ -48,6 +49,8 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
   const [editableText, setEditableText] = useState("");
   const [activeAttachment, setActiveAttachment] = useState<Attachment | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [creditCheckResult, setCreditCheckResult] = useState<any>(null);
   
   // Canvas State
   const [view, setView] = useState<ViewState>({ x: 0, y: 0, scale: 1 });
@@ -105,6 +108,9 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
 
       setCurrentItem(updatedItem);
       onUpdate(updatedItem);
+
+      // 触发积分更新事件
+      window.dispatchEvent(new CustomEvent('creditUpdated'));
 
     } catch (error: any) {
       console.error(error);
@@ -647,14 +653,47 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
                   <Icons.Video className="w-4 h-4" />
                   转视频
                 </button>
-                <button 
-                  onClick={() => handleRegenerate()}
-                  disabled={isGenerating}
-                  className="px-6 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-2 shadow-lg shadow-accent/20 transition-colors"
-                >
-                  {isGenerating ? <Icons.Refresh className="w-4 h-4 animate-spin" /> : <Icons.Image className="w-4 h-4" />}
-                  {isGenerating ? '绘制中...' : (activeAttachment ? '参考生成' : '生成画面')}
-                </button>
+                
+                <CreditCheck serviceType="image_generation" onCreditCheck={setCreditCheckResult}>
+                  {({ sufficient, cost, checking, error, checkResult }) => (
+                    <button 
+                      onClick={() => {
+                        if (sufficient) {
+                          handleRegenerate();
+                        } else if (checkResult) {
+                          setCreditCheckResult(checkResult);
+                          setShowCreditModal(true);
+                        }
+                      }}
+                      disabled={isGenerating || checking || !sufficient}
+                      className={`px-6 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-2 shadow-lg transition-colors relative ${
+                        sufficient 
+                          ? 'bg-accent hover:bg-accent-hover shadow-accent/20' 
+                          : 'bg-slate-600 cursor-not-allowed'
+                      }`}
+                      title={!sufficient ? `积分不足，需要${cost}积分` : `消耗${cost}积分生成图片`}
+                    >
+                      {isGenerating ? (
+                        <Icons.Refresh className="w-4 h-4 animate-spin" />
+                      ) : checking ? (
+                        <Icons.Clock className="w-4 h-4" />
+                      ) : (
+                        <Icons.Image className="w-4 h-4" />
+                      )}
+                      {isGenerating ? '绘制中...' : 
+                       checking ? '检查中...' :
+                       !sufficient ? `需要${cost}积分` :
+                       (activeAttachment ? '参考生成' : '生成画面')}
+                      
+                      {/* 积分数量显示 */}
+                      {!isGenerating && !checking && (
+                        <span className="absolute -top-1 -right-1 bg-slate-800 text-xs px-1.5 py-0.5 rounded text-slate-300 border border-slate-600 font-mono">
+                          {cost}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </CreditCheck>
              </div>
           </div>
         </div>
@@ -903,6 +942,18 @@ export const ImageCanvas: React.FC<ImageCanvasProps> = ({ promptItem, onUpdate, 
             })}
          </div>
       </div>
+      
+      {showCreditModal && creditCheckResult && (
+        <CreditInsufficientModal
+          isOpen={showCreditModal}
+          onClose={() => setShowCreditModal(false)}
+          checkResult={creditCheckResult}
+          onRetry={() => {
+            // 重新检查积分后再次尝试生成
+            handleRegenerate();
+          }}
+        />
+      )}
       
       <VideoModal 
         isOpen={isVideoModalOpen} 

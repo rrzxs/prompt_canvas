@@ -6,6 +6,10 @@ import { ImageCanvas } from './components/ImageCanvas';
 import { ChatInterface } from './components/ChatInterface';
 import { LandingPage } from './components/LandingPage';
 import { PromptCard } from './components/PromptCard';
+import { CreditDisplay } from './components/CreditDisplay';
+import { CreditHistory } from './components/CreditHistory';
+import { CreditGuide, useCreditGuide } from './components/CreditGuide';
+import { CreditStatusBanner } from './components/CreditStatusBanner';
 import { apiService } from './services/apiService';
 
 // ... (Sidebar, SettingsPage, LoginPage, Dashboard components remain unchanged)
@@ -13,6 +17,7 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
   const navigate = useNavigate();
   const location = useLocation();
   const version = "v1.2"; // Version indicator for caching checks
+  const [showCreditHistory, setShowCreditHistory] = useState(false);
   
   const NavItem = ({ path, icon: Icon, label }: any) => (
     <button 
@@ -31,6 +36,10 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
 
   return (
     <div className="w-full h-full flex flex-col bg-panel">
+      {showCreditHistory && (
+        <CreditHistory onClose={() => setShowCreditHistory(false)} />
+      )}
+      
       <div className="p-6 border-b border-slate-700 shrink-0 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent to-purple-400 flex items-center gap-2">
           <Icons.Layers className="w-8 h-8 text-accent" />
@@ -53,19 +62,43 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
         </div>
       </div>
 
-      <div className="p-4 border-t border-slate-700 bg-slate-800/30 shrink-0">
-        <div className="flex items-center gap-3 mb-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center font-bold text-xs text-white">
-            {user.username.substring(0, 2).toUpperCase()}
+      {/* 简化的用户信息卡片 */}
+      <div className="p-4 border-t border-slate-700 bg-gradient-to-br from-slate-800/30 to-slate-900/30 shrink-0">
+        {/* 用户信息行 - 简化版 */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center font-bold text-sm text-white shadow-lg">
+              {user.username.substring(0, 2).toUpperCase()}
+            </div>
+            <span className="text-sm font-medium text-white truncate">{user.username}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{user.username}</p>
-            <p className="text-xs text-slate-500">内部试玩版 ({version})</p>
-            <a href="https://www.rrzxs.com" target="_blank" rel="noreferrer" className="text-[10px] text-slate-500 hover:text-accent truncate block mt-0.5">人人智学社出品</a>
-          </div>
+          <button
+            onClick={() => setShowCreditHistory(true)}
+            className="p-1.5 text-slate-400 hover:text-accent hover:bg-slate-700/50 rounded-lg transition-all duration-200 group"
+            title="积分历史"
+          >
+            <Icons.History className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          </button>
         </div>
-        <button onClick={onLogout} className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 px-2 py-1 text-xs transition-colors">
-          <Icons.LogOut className="w-3 h-3" /> 退出登录
+
+        {/* 积分信息区域 - 简化版 */}
+        <div className="bg-slate-900/40 rounded-lg p-3 mb-3 border border-slate-700/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
+              <Icons.Coins className="w-3 h-3" />
+              积分
+            </span>
+          </div>
+          <CreditDisplay showDetails={true} className="w-full" />
+        </div>
+
+        {/* 退出登录按钮 - 简化版 */}
+        <button 
+          onClick={onLogout} 
+          className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 hover:bg-red-500/5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200"
+        >
+          <Icons.LogOut className="w-3 h-3" /> 
+          退出登录
         </button>
       </div>
     </div>
@@ -334,6 +367,7 @@ const Dashboard = ({ user }: { user: User }) => {
   const [input, setInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const navigate = useNavigate();
+  const { shouldShowGuide, hideGuide } = useCreditGuide();
   
   const handleQuickAdd = async () => {
     if (!input.trim()) return;
@@ -369,6 +403,14 @@ const Dashboard = ({ user }: { user: User }) => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 text-center max-w-3xl mx-auto">
+      {shouldShowGuide && (
+        <CreditGuide 
+          isOpen={shouldShowGuide} 
+          onClose={hideGuide}
+          onComplete={hideGuide}
+        />
+      )}
+      
       <h2 className="text-4xl font-bold text-white mb-6">今天想创作什么？</h2>
       <div className="w-full relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-accent to-purple-600 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
@@ -765,6 +807,9 @@ const AuthenticatedLayout = ({ user, onLogout, children }: { user: User, onLogou
   return (
     <div className="flex h-screen bg-canvas text-slate-200 overflow-hidden relative">
       
+      {/* 积分状态横幅 */}
+      <CreditStatusBanner />
+      
       {/* Mobile Header */}
       <div className="md:hidden absolute top-0 left-0 right-0 h-16 z-30 flex items-center px-4 justify-between pointer-events-none">
           {!isMobileMenuOpen && !isWorkspace && (
@@ -800,8 +845,27 @@ const AuthenticatedLayout = ({ user, onLogout, children }: { user: User, onLogou
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden relative h-full transition-all duration-500 w-full">
-         {children}
+      <main className="flex-1 overflow-hidden relative h-full transition-all duration-500 w-full flex flex-col">
+         <div className="flex-1 overflow-hidden">
+           {children}
+         </div>
+         
+         {/* Footer - 品牌信息 */}
+         {!isWorkspace && (
+           <footer className="px-6 py-3 border-t border-slate-700/30 bg-slate-900/20 backdrop-blur-sm">
+             <div className="flex items-center justify-center">
+               <a 
+                 href="https://www.rrzxs.com" 
+                 target="_blank" 
+                 rel="noreferrer" 
+                 className="text-xs text-slate-500 hover:text-slate-400 transition-colors flex items-center gap-1"
+               >
+                 <Icons.ExternalLink className="w-3 h-3" />
+                 人人智学社出品
+               </a>
+             </div>
+           </footer>
+         )}
       </main>
     </div>
   );

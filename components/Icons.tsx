@@ -43,7 +43,20 @@ import {
   Paperclip,
   User,
   Globe,
-  ExternalLink
+  ExternalLink,
+  Coins,
+  AlertTriangle,
+  AlertCircle,
+  Clock,
+  RotateCcw,
+  Minus,
+  Circle,
+  Gift,
+  Zap,
+  Shield,
+  Lightbulb,
+  CheckCircle,
+  Heart
 } from 'lucide-react';
 
 export const Icons = {
@@ -90,5 +103,18 @@ export const Icons = {
   Paperclip,
   User,
   Globe,
-  ExternalLink
+  ExternalLink,
+  Coins,
+  AlertTriangle,
+  AlertCircle,
+  Clock,
+  RotateCcw,
+  Minus,
+  Circle,
+  Gift,
+  Zap,
+  Shield,
+  Lightbulb,
+  CheckCircle,
+  Heart
 };

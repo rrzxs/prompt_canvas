@@ -64,7 +64,19 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, isPersonal, onDe
         </div>
         
         <div className="pt-3 border-t border-white/10 text-[10px] text-slate-400 flex justify-between items-center mt-2">
-           <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
+           <div className="flex items-center gap-2">
+             <span>{new Date(prompt.updatedAt).toLocaleDateString()}</span>
+             {/* 显示作者信息（仅在公开提示词且有作者信息时显示） */}
+             {!isPersonal && prompt.author && (
+               <>
+                 <span className="text-slate-600">•</span>
+                 <div className="flex items-center gap-1 text-slate-500">
+                   <Icons.User className="w-3 h-3" />
+                   <span>@{prompt.author.username}</span>
+                 </div>
+               </>
+             )}
+           </div>
            
            <div className="flex items-center gap-2">
                {isPersonal && onTogglePublic && (
