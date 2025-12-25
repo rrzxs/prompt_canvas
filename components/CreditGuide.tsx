@@ -9,10 +9,10 @@ interface CreditGuideProps {
   onComplete?: () => void;
 }
 
-export const CreditGuide: React.FC<CreditGuideProps> = ({ 
-  isOpen, 
-  onClose, 
-  onComplete 
+export const CreditGuide: React.FC<CreditGuideProps> = ({
+  isOpen,
+  onClose,
+  onComplete
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [serviceCosts, setServiceCosts] = useState<ServiceCosts | null>(null);
@@ -29,7 +29,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
       title: '欢迎使用观想阁积分系统',
       icon: Icons.Coins,
       content: (
-        <div className="space-y-4">
+        <div className="space-y-4 text-left">
           <p className="text-slate-300 leading-relaxed">
             为了确保AI资源的合理使用和服务的稳定性，我们引入了积分机制。
             每位用户都有专属的积分账户，用于管理AI服务的使用。
@@ -50,7 +50,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
       title: '积分消耗规则',
       icon: Icons.Zap,
       content: (
-        <div className="space-y-4">
+        <div className="space-y-4 text-left">
           <p className="text-slate-300 mb-4">
             不同的AI服务消耗不同数量的积分：
           </p>
@@ -70,7 +70,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
                 <div className="text-xs text-slate-500">每次生成</div>
               </div>
             </div>
-            
+
             <div className="bg-slate-800/50 rounded-lg p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Icons.MessageSquare className="w-6 h-6 text-emerald-400" />
@@ -87,7 +87,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Icons.Shield className="w-5 h-5 text-yellow-400" />
@@ -104,11 +104,11 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
       title: '积分恢复机制',
       icon: Icons.RotateCcw,
       content: (
-        <div className="space-y-4">
+        <div className="space-y-4 text-left">
           <p className="text-slate-300 mb-4">
             我们提供多种方式帮助您恢复积分：
           </p>
-          
+
           <div className="space-y-3">
             <div className="bg-slate-800/50 rounded-lg p-4">
               <div className="flex items-center gap-3 mb-2">
@@ -122,7 +122,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
                 积分上限为{serviceCosts?.daily_limit || 200}，达到上限后不再恢复
               </p>
             </div>
-            
+
             <div className="bg-slate-800/50 rounded-lg p-4">
               <div className="flex items-center gap-3 mb-2">
                 <Icons.Sun className="w-5 h-5 text-orange-400" />
@@ -143,11 +143,11 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
       title: '积分使用建议',
       icon: Icons.Lightbulb,
       content: (
-        <div className="space-y-4">
+        <div className="space-y-4 text-left">
           <p className="text-slate-300 mb-4">
             为了更好地使用积分系统，我们建议：
           </p>
-          
+
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <Icons.CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
@@ -158,7 +158,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-3">
               <Icons.CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
               <div>
@@ -168,7 +168,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-3">
               <Icons.CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
               <div>
@@ -179,7 +179,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Icons.Heart className="w-5 h-5 text-emerald-400" />
@@ -250,7 +250,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
         {/* 进度条 */}
         <div className="px-6 py-4 border-b border-slate-700">
           <div className="w-full bg-slate-700 rounded-full h-2">
-            <div 
+            <div
               className="bg-accent h-2 rounded-full transition-all duration-300"
               style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
             />
@@ -258,7 +258,7 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
         </div>
 
         {/* 内容 */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 text-left">
           {currentStepData.content}
         </div>
 
@@ -272,19 +272,18 @@ export const CreditGuide: React.FC<CreditGuideProps> = ({
             <Icons.ChevronLeft className="w-4 h-4" />
             上一步
           </button>
-          
+
           <div className="flex items-center gap-2">
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentStep ? 'bg-accent' : 
-                  index < currentStep ? 'bg-accent/50' : 'bg-slate-600'
-                }`}
+                className={`w-2 h-2 rounded-full transition-colors ${index === currentStep ? 'bg-accent' :
+                    index < currentStep ? 'bg-accent/50' : 'bg-slate-600'
+                  }`}
               />
             ))}
           </div>
-          
+
           <button
             onClick={handleNext}
             className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white px-6 py-2 rounded-lg font-medium transition-colors"
@@ -309,7 +308,7 @@ export const useCreditGuide = () => {
       const timer = setTimeout(() => {
         setShouldShowGuide(true);
       }, 2000);
-      
+
       return () => clearTimeout(timer);
     }
   }, []);
