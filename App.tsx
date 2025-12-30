@@ -915,7 +915,7 @@ const PromptDetail = ({ user }: { user: User | null }) => {
         {isReasoning ? (
           <ChatInterface promptItem={prompt} onUpdate={handleUpdate} readOnly={!isOwner} />
         ) : (
-          <ImageCanvas promptItem={prompt} onUpdate={handleUpdate} readOnly={!isOwner} />
+          <ImageCanvas promptItem={prompt} user={user} onUpdate={handleUpdate} readOnly={!isOwner} />
         )}
       </div>
     </div>
