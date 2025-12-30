@@ -372,15 +372,25 @@ const Dashboard = ({ user }: { user: User }) => {
   // 自动检测意图 (Plan A 的触感反馈)
   const getDetectedType = () => {
     if (!input.trim()) return 'none';
-    const visualKeywords = ['画', '图', '视觉', '渲染', '设计', '风格', '打光', '镜头', '比例', 'draw', 'paint', 'image', 'picture', 'photo', 'art', 'sketch'];
-    const reasoningKeywords = ['问', '讲', '解', '代码', '逻辑', '分析', '写作', '写段', '告诉我', '如何', 'why', 'how', 'chat', 'ask', 'explain', 'code', 'write'];
+    const visualKeywords = [
+      '画', '图', '视觉', '渲染', '设计', '风格', '打光', '镜头', '比例', '尺寸', '壁纸', '海报', '写实', '逼真',
+      'draw', 'paint', 'image', 'picture', 'photo', 'art', 'sketch', 'render', 'style', 'pixel'
+    ];
+    const reasoningKeywords = [
+      '问', '讲', '解', '代码', '逻辑', '分析', '写作', '写段', '告诉我', '如何', '为什么', '什么', '哪里', '谁', '怎么', '吗',
+      '？', '?', '!', '！', 'why', 'how', 'chat', 'ask', 'explain', 'code', 'write', 'who', 'what', 'where'
+    ];
 
     const isVisual = visualKeywords.some(kw => input.toLowerCase().includes(kw));
     const isReasoning = reasoningKeywords.some(kw => input.toLowerCase().includes(kw));
 
+    // 如果包含问号，优先判定为思维模式
+    const hasQuestionMark = input.includes('？') || input.includes('?');
+    if (hasQuestionMark && !isVisual) return 'reasoning';
+
     if (isVisual && !isReasoning) return 'visual';
     if (isReasoning && !isVisual) return 'reasoning';
-    return isVisual ? 'visual' : 'none'; // 模糊时偏向视觉或保持 none
+    return isVisual ? 'visual' : 'none';
   };
 
   const detected = getDetectedType();
@@ -391,7 +401,7 @@ const Dashboard = ({ user }: { user: User }) => {
     switch (activeMode) {
       case 'visual': return 'from-indigo-600 via-purple-500 to-pink-500';
       case 'reasoning': return 'from-emerald-500 via-teal-400 to-blue-500';
-      case 'auto': return 'from-slate-500 via-slate-400 to-slate-500';
+      case 'auto': return 'from-slate-600 via-slate-500 to-slate-600'; // 稍微亮一点的灰色
       default: return 'from-accent to-purple-600';
     }
   };
@@ -516,7 +526,7 @@ const Dashboard = ({ user }: { user: User }) => {
               <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium ml-2">
                 {activeMode === 'visual' && <span className="flex items-center gap-1 text-indigo-400/80 animate-in fade-in"><Icons.Check className="w-3 h-3" /> 已准备好构图</span>}
                 {activeMode === 'reasoning' && <span className="flex items-center gap-1 text-emerald-400/80 animate-in fade-in"><Icons.Check className="w-3 h-3" /> 已准备好思考</span>}
-                {activeMode === 'auto' && input.length > 0 && <span className="animate-pulse">正在解析意图...</span>}
+                {activeMode === 'auto' && input.trim().length > 0 && <span className="text-slate-600">发送时将通过 AI 自动分配实验室</span>}
               </div>
 
               <button
