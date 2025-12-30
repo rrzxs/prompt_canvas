@@ -11,10 +11,16 @@
   "dependencies": {
     "@google/genai": "^1.30.0",
     "axios": "^1.13.2",
+    "github-markdown-css": "^5.8.1",
+    "highlight.js": "^11.11.1",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.6",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
