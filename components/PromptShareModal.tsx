@@ -30,7 +30,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
             const cardElement = cardRef.current;
             const width = cardElement.offsetWidth;
             const height = cardElement.offsetHeight;
-            const scale = Math.max(window.devicePixelRatio || 1, 2);
+            const scale = Math.max(window.devicePixelRatio || 1, 3);
 
             const canvas = await html2canvas(cardElement, {
                 useCORS: true,
@@ -63,6 +63,11 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                         container.style.backgroundRepeat = 'no-repeat';
                         image.style.visibility = 'hidden';
                     }
+                    clonedElement
+                        .querySelectorAll('[data-share-text="true"]')
+                        .forEach((node) => {
+                            (node as HTMLElement).style.transform = 'translateY(-6px)';
+                        });
                 }
             });
 
@@ -99,7 +104,10 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                     <div
                         ref={cardRef}
                         className="w-[400px] bg-[#0f172a] rounded-[24px] overflow-hidden shadow-2xl border border-slate-700/50 flex flex-col relative"
-                        style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                        style={{
+                            fontFamily:
+                                "'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif"
+                        }}
                     >
                         {/* Top Shine Effect */}
                         <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none"></div>
@@ -127,7 +135,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                                     paddingTop: '1px'   // 视觉微调，补偿字体重心
                                 }}
                             >
-                                观想阁 · Insight Gallery
+                                <span data-share-text="true">观想阁 · Insight Gallery</span>
                             </div>
                         </div>
 
@@ -136,8 +144,12 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                             {/* Prompt Tags / Keywords */}
                             <div className="flex flex-wrap gap-2">
                                 {prompt.tags.map(tag => (
-                                    <span key={tag} className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                                        #{tag}
+                                    <span
+                                        key={tag}
+                                        className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                                        style={{ lineHeight: '12px' }}
+                                    >
+                                        <span data-share-text="true">#{tag}</span>
                                     </span>
                                 ))}
                             </div>
@@ -145,7 +157,11 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                             {/* Prompt Text (Truncated) */}
                             <div className="relative">
                                 <Icons.Maximize className="absolute -left-1 -top-1 w-8 h-8 text-indigo-500/5 rotate-12" />
-                                <p className="text-slate-300 text-sm leading-relaxed line-clamp-4 italic relative z-10 pl-2 border-l-2 border-indigo-500/30">
+                                <p
+                                    className="text-slate-300 text-sm line-clamp-4 italic relative z-10 pl-2 border-l-2 border-indigo-500/30"
+                                    style={{ lineHeight: '22px' }}
+                                    data-share-text="true"
+                                >
                                     "{version.text}"
                                 </p>
                             </div>
@@ -161,13 +177,21 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                                         className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xs text-white border-2 border-slate-800 shadow-lg"
                                         style={{ lineHeight: '36px' }} // 补偿边框后的实际内部高度 (40px - 4px border)
                                     >
-                                        <span style={{ display: 'block', height: '100%' }}>
-                                            {user?.username.substring(0, 2).toUpperCase() || 'GS'}
+                                        <span data-share-text="true" style={{ display: 'block', height: '100%' }}>
+                                            {(prompt.author?.username || user?.username || '观想阁用户').substring(0, 2).toUpperCase()}
                                         </span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-white">{user?.username || '观想阁用户'}</span>
-                                        <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Verified Prompt Engineer</span>
+                                        <span className="text-xs font-bold text-white" style={{ lineHeight: '16px' }} data-share-text="true">
+                                            {prompt.author?.username || user?.username || '观想阁用户'}
+                                        </span>
+                                        <span
+                                            className="text-[10px] text-slate-500 uppercase tracking-tighter"
+                                            style={{ lineHeight: '12px' }}
+                                            data-share-text="true"
+                                        >
+                                            Verified Prompt Engineer
+                                        </span>
                                     </div>
                                 </div>
 
@@ -183,9 +207,12 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                             </div>
 
                             {/* Slogan & Branding */}
-                            <div className="mt-4 flex items-center justify-between text-[9px] text-slate-600 font-medium">
-                                <span>人人智学社出品</span>
-                                <span>{new Date().toLocaleDateString('zh-CN')}</span>
+                            <div
+                                className="mt-4 flex items-center justify-between text-[9px] text-slate-600 font-medium"
+                                style={{ lineHeight: '12px' }}
+                            >
+                                <span data-share-text="true">人人智学社出品</span>
+                                <span data-share-text="true">{new Date().toLocaleDateString('zh-CN')}</span>
                             </div>
                         </div>
 
