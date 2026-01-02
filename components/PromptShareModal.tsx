@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { PromptItem, PromptVersion, User } from '../types';
 import { Icons } from './Icons';
@@ -22,14 +22,22 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
         if (!cardRef.current) return;
         setIsGenerating(true);
         try {
-            if (document.fonts?.ready) {
-                await document.fonts.ready;
-            }
-            // 直接截取原卡片，不进行克隆
-            // 使用 onclone 回调来确保样式正确应用
+            // 确保字体和图片都已加载
+            const images = Array.from(cardRef.current.querySelectorAll('img')) as HTMLImageElement[];
+            await Promise.all([
+                document.fonts?.ready || Promise.resolve(),
+                ...images.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise(resolve => {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                    });
+                })
+            ]);
+
             const cardElement = cardRef.current;
-            const width = cardElement.offsetWidth;
-            const height = cardElement.offsetHeight;
+            const width = cardElement.offsetWidth || 400;
+            const height = cardElement.offsetHeight || 600;
             const scale = Math.max(window.devicePixelRatio || 1, 3);
 
             const canvas = await html2canvas(cardElement, {
@@ -38,24 +46,22 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                 backgroundColor: '#0f172a',
                 scale,
                 logging: false,
-                // 关键：使用元素实际尺寸，避免任何缩放
                 width,
                 height,
                 windowWidth: width,
                 windowHeight: height,
-                // 修复滚动偏移
                 scrollX: 0,
                 scrollY: 0,
-                // 使用 onclone 回调来修复克隆后的样式问题
                 onclone: (clonedDoc, clonedElement) => {
-                    // 确保克隆的元素样式正确
                     clonedElement.style.transform = 'none';
                     clonedElement.style.margin = '0';
                     clonedElement.style.position = 'relative';
                     clonedElement.style.top = '0';
                     clonedElement.style.left = '0';
+
                     const image = clonedElement.querySelector('[data-share-image="true"]') as HTMLImageElement | null;
-                    if (image?.parentElement) {
+                    // 仅在图片有效且有尺寸时应用背景图技巧
+                    if (image?.parentElement && image.complete && image.naturalWidth > 0) {
                         const container = image.parentElement as HTMLElement;
                         container.style.backgroundImage = `url("${image.src}")`;
                         container.style.backgroundSize = 'cover';
@@ -63,6 +69,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                         container.style.backgroundRepeat = 'no-repeat';
                         image.style.visibility = 'hidden';
                     }
+
                     clonedElement
                         .querySelectorAll('[data-share-text="true"]')
                         .forEach((node) => {
@@ -197,7 +204,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
 
                                 {/* QR Code */}
                                 <div className="p-1.5 bg-white rounded-lg shadow-inner">
-                                    <QRCodeSVG
+                                    <QRCodeCanvas
                                         value={shareUrl}
                                         size={64}
                                         level="H"
