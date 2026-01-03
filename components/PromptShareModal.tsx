@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { PromptItem, PromptVersion, User } from '../types';
 import { Icons } from './Icons';
@@ -22,8 +22,16 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
         if (!cardRef.current) return;
         setIsGenerating(true);
         try {
+            // 给浏览器一点渲染时间，确保所有样式和二维码都已就绪
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const cardElement = cardRef.current;
+            if (!cardElement || cardElement.offsetWidth === 0) {
+                throw new Error('卡片容器尚未准备好，请稍后重试');
+            }
+
             // 确保字体和图片都已加载
-            const images = Array.from(cardRef.current.querySelectorAll('img')) as HTMLImageElement[];
+            const images = Array.from(cardElement.querySelectorAll('img')) as HTMLImageElement[];
             await Promise.all([
                 document.fonts?.ready || Promise.resolve(),
                 ...images.map(img => {
@@ -35,7 +43,6 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                 })
             ]);
 
-            const cardElement = cardRef.current;
             const width = cardElement.offsetWidth || 400;
             const height = cardElement.offsetHeight || 600;
             const scale = Math.max(window.devicePixelRatio || 1, 3);
@@ -75,6 +82,29 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                         .forEach((node) => {
                             (node as HTMLElement).style.transform = 'translateY(-6px)';
                         });
+
+                    // 修复 html2canvas 不支持 oklab/oklch 的问题
+                    const allElements = clonedElement.querySelectorAll('*');
+                    allElements.forEach(el => {
+                        const element = el as HTMLElement;
+                        const computedStyle = window.getComputedStyle(element);
+                        const properties = ['color', 'backgroundColor', 'borderColor', 'fill', 'stroke', 'backgroundImage'];
+
+                        properties.forEach(prop => {
+                            const value = computedStyle.getPropertyValue(prop === 'backgroundColor' ? 'background-color' : prop === 'borderColor' ? 'border-color' : prop);
+                            if (value && (value.includes('oklch') || value.includes('oklab'))) {
+                                // 如果发现 oklab/oklch，尝试强制降级为 rgb (通过设置一个简单的值)
+                                // 或者如果它是一个渐变，我们在这里可以简化处理
+                                if (value.includes('gradient')) {
+                                    element.style.setProperty(prop, 'none', 'important');
+                                } else {
+                                    // 简单的正则替换，如果能找到数字，尝试简单模拟一个 rgb
+                                    // 但最安全的是直接设置一个固定色或继承
+                                    element.style.setProperty(prop, 'inherit', 'important');
+                                }
+                            }
+                        });
+                    });
                 }
             });
 
@@ -110,14 +140,18 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                 <div className="flex-shrink-0">
                     <div
                         ref={cardRef}
-                        className="w-[400px] bg-[#0f172a] rounded-[24px] overflow-hidden shadow-2xl border border-slate-700/50 flex flex-col relative"
+                        className="w-[400px] bg-[#0f172a] rounded-[24px] overflow-hidden shadow-2xl flex flex-col relative"
                         style={{
                             fontFamily:
-                                "'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif"
+                                "'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
+                            border: '1px solid rgba(51, 65, 85, 0.5)'
                         }}
                     >
                         {/* Top Shine Effect */}
-                        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none"></div>
+                        <div
+                            className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
+                            style={{ background: 'linear-gradient(to bottom, rgba(99, 102, 241, 0.1), transparent)' }}
+                        ></div>
 
                         {/* Generated Image - 使用固定高度确保坐标计算准确 */}
                         <div className="relative w-full h-[400px] overflow-hidden bg-slate-900">
@@ -136,10 +170,12 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                             )}
                             {/* Overlay Badge - 使用显式高度和行高确保垂直居中 */}
                             <div
-                                className="absolute top-4 left-4 h-6 px-3 bg-[#1a1a1a]/80 rounded-full border border-white/10 text-[10px] font-bold text-white/90 tracking-widest uppercase z-20 flex items-center justify-center"
+                                className="absolute top-4 left-4 h-6 px-3 rounded-full text-[10px] font-bold text-white/90 tracking-widest uppercase z-20 flex items-center justify-center"
                                 style={{
-                                    lineHeight: '24px', // 与高度 h-6 (24px) 一致
-                                    paddingTop: '1px'   // 视觉微调，补偿字体重心
+                                    lineHeight: '24px',
+                                    paddingTop: '1px',
+                                    backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)'
                                 }}
                             >
                                 <span data-share-text="true">观想阁 · Insight Gallery</span>
@@ -153,8 +189,13 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                                 {prompt.tags.map(tag => (
                                     <span
                                         key={tag}
-                                        className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                                        style={{ lineHeight: '12px' }}
+                                        className="text-[10px] px-2 py-0.5 rounded-md"
+                                        style={{
+                                            lineHeight: '12px',
+                                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                            color: '#818cf8',
+                                            border: '1px solid rgba(99, 102, 241, 0.2)'
+                                        }}
                                     >
                                         <span data-share-text="true">#{tag}</span>
                                     </span>
@@ -163,10 +204,16 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
 
                             {/* Prompt Text (Truncated) */}
                             <div className="relative">
-                                <Icons.Maximize className="absolute -left-1 -top-1 w-8 h-8 text-indigo-500/5 rotate-12" />
+                                <Icons.Maximize
+                                    className="absolute -left-1 -top-1 w-8 h-8 rotate-12"
+                                    style={{ color: 'rgba(99, 102, 241, 0.05)' }}
+                                />
                                 <p
-                                    className="text-slate-300 text-sm line-clamp-4 italic relative z-10 pl-2 border-l-2 border-indigo-500/30"
-                                    style={{ lineHeight: '22px' }}
+                                    className="text-slate-300 text-sm line-clamp-4 italic relative z-10 pl-2"
+                                    style={{
+                                        lineHeight: '22px',
+                                        borderLeft: '2px solid rgba(99, 102, 241, 0.3)'
+                                    }}
                                     data-share-text="true"
                                 >
                                     "{version.text}"
@@ -174,15 +221,22 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                             </div>
 
                             {/* Divider */}
-                            <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-700/50 to-transparent my-2"></div>
+                            <div
+                                className="h-px w-full my-2"
+                                style={{ background: 'linear-gradient(to right, transparent, rgba(51, 65, 85, 0.5), transparent)' }}
+                            ></div>
 
                             {/* Footer */}
                             <div className="flex items-end justify-between gap-4">
                                 {/* User Info */}
                                 <div className="flex items-center gap-3">
                                     <div
-                                        className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xs text-white border-2 border-slate-800 shadow-lg"
-                                        style={{ lineHeight: '36px' }} // 补偿边框后的实际内部高度 (40px - 4px border)
+                                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-lg"
+                                        style={{
+                                            lineHeight: '36px',
+                                            background: 'linear-gradient(to bottom right, #6366f1, #9333ea)',
+                                            border: '2px solid #1e293b'
+                                        }} // 补偿边框后的实际内部高度 (40px - 4px border)
                                     >
                                         <span data-share-text="true" style={{ display: 'block', height: '100%' }}>
                                             {(prompt.author?.username || user?.username || '观想阁用户').substring(0, 2).toUpperCase()}
@@ -203,8 +257,8 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                                 </div>
 
                                 {/* QR Code */}
-                                <div className="p-1.5 bg-white rounded-lg shadow-inner">
-                                    <QRCodeCanvas
+                                <div className="p-1.5 bg-white rounded-lg shadow-inner overflow-hidden">
+                                    <QRCodeSVG
                                         value={shareUrl}
                                         size={64}
                                         level="H"
@@ -224,7 +278,10 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                         </div>
 
                         {/* Bottom Glow */}
-                        <div className="h-1.5 w-full bg-gradient-to-r from-indigo-600 via-purple-500 to-pink-500 opacity-50"></div>
+                        <div
+                            className="h-1.5 w-full opacity-50"
+                            style={{ background: 'linear-gradient(to right, #4f46e5, #a855f7, #ec4899)' }}
+                        ></div>
                     </div>
                 </div>
 
