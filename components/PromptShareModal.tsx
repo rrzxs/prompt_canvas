@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { PromptItem, PromptVersion, User } from '../types';
 import { Icons } from './Icons';
@@ -172,18 +172,22 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                     clonedElement.style.left = '0';
 
                     const image = clonedElement.querySelector('[data-share-image="true"]') as HTMLImageElement | null;
-                    if (image?.parentElement) {
-                        const container = image.parentElement as HTMLElement;
+                    if (image) {
                         // 使用预加载的 Data URL (已经过 CORS 处理) 替换原图片
                         const imageToUse = preloadedImageUrl || image.src;
+                        image.crossOrigin = 'anonymous';
+                        if (imageToUse && image.src !== imageToUse) {
+                            image.src = imageToUse;
+                        }
+                        image.style.display = 'block';
+                        image.style.visibility = 'visible';
+                        image.style.opacity = '1';
+                        image.style.width = '100%';
+                        image.style.height = '100%';
+                        image.style.objectFit = 'cover';
 
                         // 始终使用背景图方式，避免 img 标签的 CORS 问题
-                        container.style.backgroundImage = `url("${imageToUse}")`;
-                        container.style.backgroundSize = 'cover';
-                        container.style.backgroundPosition = 'center';
-                        container.style.backgroundRepeat = 'no-repeat';
                         // 隐藏原图片元素，防止 html2canvas 尝试绘制它
-                        image.style.display = 'none';
                     }
 
                     clonedElement
@@ -196,8 +200,15 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                     const allElements = clonedElement.querySelectorAll('*');
                     allElements.forEach(el => {
                         const element = el as HTMLElement;
-                        const computedStyle = window.getComputedStyle(element);
+                        const computedStyle = clonedDoc.defaultView?.getComputedStyle(element) || window.getComputedStyle(element);
                         const properties = ['color', 'backgroundColor', 'borderColor', 'fill', 'stroke', 'backgroundImage'];
+
+                        if (computedStyle.backgroundImage !== 'none') {
+                            const rect = element.getBoundingClientRect();
+                            if (rect.width < 1 || rect.height < 1) {
+                                element.style.setProperty('background-image', 'none', 'important');
+                            }
+                        }
 
                         properties.forEach(prop => {
                             const value = computedStyle.getPropertyValue(prop === 'backgroundColor' ? 'background-color' : prop === 'borderColor' ? 'border-color' : prop);
@@ -367,7 +378,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
 
                                 {/* QR Code */}
                                 <div className="p-1.5 bg-white rounded-lg shadow-inner overflow-hidden">
-                                    <QRCodeSVG
+                                    <QRCodeCanvas
                                         value={shareUrl}
                                         size={64}
                                         level="H"
