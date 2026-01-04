@@ -991,7 +991,7 @@ const AuthenticatedLayout = ({ user, onLogout, children }: { user: User, onLogou
                 className="text-xs text-slate-500 hover:text-slate-400 transition-colors flex items-center gap-1"
               >
                 <Icons.ExternalLink className="w-3 h-3" />
-                人人智学社出品
+                人人智学社 rrzxs.com
               </a>
             </div>
           </footer>

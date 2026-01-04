@@ -155,7 +155,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
             const canvas = await html2canvas(cardElement, {
                 useCORS: true,
                 allowTaint: false,
-                backgroundColor: '#0f172a',
+                backgroundColor: '#ffffff',
                 scale,
                 logging: false,
                 width,
@@ -266,18 +266,14 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                 <div className="flex-shrink-0">
                     <div
                         ref={cardRef}
-                        className="w-[400px] bg-[#0f172a] rounded-[24px] overflow-hidden shadow-2xl flex flex-col relative"
+                        className="w-[400px] bg-[#0f172a] overflow-hidden flex flex-col relative"
                         style={{
                             fontFamily:
                                 "'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
-                            border: '1px solid rgba(51, 65, 85, 0.5)'
+                            border: 'none'
                         }}
                     >
-                        {/* Top Shine Effect */}
-                        <div
-                            className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
-                            style={{ background: 'linear-gradient(to bottom, rgba(99, 102, 241, 0.1), transparent)' }}
-                        ></div>
+
 
                         {/* Generated Image - 使用固定高度确保坐标计算准确 */}
                         <div className="relative w-full h-[400px] overflow-hidden bg-slate-900" data-share-image-frame="true">
@@ -398,7 +394,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                                 className="mt-4 flex items-center justify-between text-[9px] text-slate-600 font-medium"
                                 style={{ lineHeight: '12px' }}
                             >
-                                <span data-share-text="true">人人智学社出品</span>
+                                <span data-share-text="true">人人智学社 rrzxs.com</span>
                                 <span data-share-text="true">{new Date().toLocaleDateString('zh-CN')}</span>
                             </div>
                         </div>
