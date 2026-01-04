@@ -172,22 +172,28 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                     clonedElement.style.left = '0';
 
                     const image = clonedElement.querySelector('[data-share-image="true"]') as HTMLImageElement | null;
+                    const frame = clonedElement.querySelector('[data-share-image-frame="true"]') as HTMLElement | null;
                     if (image) {
-                        // 使用预加载的 Data URL (已经过 CORS 处理) 替换原图片
                         const imageToUse = preloadedImageUrl || image.src;
                         image.crossOrigin = 'anonymous';
                         if (imageToUse && image.src !== imageToUse) {
                             image.src = imageToUse;
                         }
-                        image.style.display = 'block';
-                        image.style.visibility = 'visible';
-                        image.style.opacity = '1';
-                        image.style.width = '100%';
-                        image.style.height = '100%';
-                        image.style.objectFit = 'cover';
 
-                        // 始终使用背景图方式，避免 img 标签的 CORS 问题
-                        // 隐藏原图片元素，防止 html2canvas 尝试绘制它
+                        if (frame && imageToUse) {
+                            frame.style.backgroundImage = `url("${imageToUse}")`;
+                            frame.style.backgroundSize = 'cover';
+                            frame.style.backgroundPosition = 'center';
+                            frame.style.backgroundRepeat = 'no-repeat';
+                            image.style.display = 'none';
+                        } else {
+                            image.style.display = 'block';
+                            image.style.visibility = 'visible';
+                            image.style.opacity = '1';
+                            image.style.width = '100%';
+                            image.style.height = '100%';
+                            image.style.objectFit = 'cover';
+                        }
                     }
 
                     clonedElement
@@ -274,7 +280,7 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                         ></div>
 
                         {/* Generated Image - 使用固定高度确保坐标计算准确 */}
-                        <div className="relative w-full h-[400px] overflow-hidden bg-slate-900">
+                        <div className="relative w-full h-[400px] overflow-hidden bg-slate-900" data-share-image-frame="true">
                             {(preloadedImageUrl || version.imageUrl) ? (
                                 <img
                                     data-share-image="true"
