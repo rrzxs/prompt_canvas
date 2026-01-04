@@ -11,12 +11,12 @@ import { CreditHistory } from './components/CreditHistory';
 import { CreditGuide, useCreditGuide } from './components/CreditGuide';
 import { CreditStatusBanner } from './components/CreditStatusBanner';
 import { apiService } from './services/apiService';
+import { VERSION } from './version';
 
 // ... (Sidebar, SettingsPage, LoginPage, Dashboard components remain unchanged)
 const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () => void, onCloseMobile?: () => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const version = "v1.2"; // Version indicator for caching checks
   const [showCreditHistory, setShowCreditHistory] = useState(false);
 
   const NavItem = ({ path, icon: Icon, label }: any) => (
@@ -99,6 +99,11 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
           <Icons.LogOut className="w-3 h-3" />
           退出登录
         </button>
+
+        {/* 版本号 - 不显眼位置 */}
+        <div className="mt-4 text-[9px] text-slate-600 text-center font-mono opacity-40 hover:opacity-100 transition-opacity cursor-default">
+          {VERSION}
+        </div>
       </div>
     </div>
   );

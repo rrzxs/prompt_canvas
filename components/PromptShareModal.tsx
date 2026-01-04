@@ -18,6 +18,93 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
 
     const shareUrl = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
 
+    /**
+     * 将远程图片加载为 Base64 Data URL，解决跨域问题
+     * 优先尝试 canvas 方式，失败则使用 fetch 代理
+     */
+    const loadImageAsDataUrl = async (imageUrl: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            img.onload = () => {
+                try {
+                    // 尝试使用 canvas 转换
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        throw new Error('无法获取 canvas context');
+                    }
+                    ctx.drawImage(img, 0, 0);
+                    // 尝试读取像素数据，如果 CORS 被阻止会抛出异常
+                    ctx.getImageData(0, 0, 1, 1);
+                    const dataUrl = canvas.toDataURL('image/png');
+                    resolve(dataUrl);
+                } catch (e) {
+                    // Canvas CORS 失败，尝试 fetch 代理
+                    console.warn('Canvas CORS 失败，尝试 fetch 代理:', e);
+                    fetchImageAsDataUrl(imageUrl).then(resolve).catch(reject);
+                }
+            };
+
+            img.onerror = () => {
+                // 图片加载失败，尝试 fetch 代理
+                console.warn('图片直接加载失败，尝试 fetch 代理');
+                fetchImageAsDataUrl(imageUrl).then(resolve).catch(reject);
+            };
+
+            img.src = imageUrl;
+        });
+    };
+
+    /**
+     * 使用 fetch 获取图片并转换为 Base64
+     */
+    const fetchImageAsDataUrl = async (imageUrl: string): Promise<string> => {
+        try {
+            const response = await fetch(imageUrl, {
+                mode: 'cors',
+                credentials: 'omit',
+            });
+            if (!response.ok) {
+                throw new Error(`Fetch 失败: ${response.status}`);
+            }
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error('Fetch 代理也失败:', e);
+            throw new Error('无法加载图片，请检查网络连接');
+        }
+    };
+
+    // 预加载的图片 Data URL
+    const [preloadedImageUrl, setPreloadedImageUrl] = useState<string | null>(null);
+    const [imageLoadError, setImageLoadError] = useState<string | null>(null);
+
+    // 在组件挂载时预加载图片
+    useEffect(() => {
+        if (version.imageUrl) {
+            setImageLoadError(null);
+            loadImageAsDataUrl(version.imageUrl)
+                .then(dataUrl => {
+                    setPreloadedImageUrl(dataUrl);
+                })
+                .catch(err => {
+                    console.error('预加载图片失败:', err);
+                    setImageLoadError(err.message || '图片加载失败');
+                    // 即使失败，也设置原始 URL 作为降级
+                    setPreloadedImageUrl(version.imageUrl || null);
+                });
+        }
+    }, [version.imageUrl]);
+
     const handleDownload = async () => {
         if (!cardRef.current) return;
         setIsGenerating(true);
@@ -30,18 +117,36 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                 throw new Error('卡片容器尚未准备好，请稍后重试');
             }
 
-            // 确保字体和图片都已加载
+            // 如果有图片但预加载失败，给用户一个警告但仍尝试继续
+            if (version.imageUrl && imageLoadError) {
+                console.warn('图片预加载有问题，尝试继续生成:', imageLoadError);
+            }
+
+            // 确保字体已加载
+            await document.fonts?.ready;
+
+            // 等待所有图片加载完成
             const images = Array.from(cardElement.querySelectorAll('img')) as HTMLImageElement[];
-            await Promise.all([
-                document.fonts?.ready || Promise.resolve(),
-                ...images.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise(resolve => {
-                        img.onload = resolve;
-                        img.onerror = resolve;
+            await Promise.all(
+                images.map(img => {
+                    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                    return new Promise<void>((resolve) => {
+                        const timeout = setTimeout(() => {
+                            console.warn('图片加载超时:', img.src);
+                            resolve();
+                        }, 5000);
+                        img.onload = () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            clearTimeout(timeout);
+                            console.warn('图片加载失败:', img.src);
+                            resolve();
+                        };
                     });
                 })
-            ]);
+            );
 
             const width = cardElement.offsetWidth || 400;
             const height = cardElement.offsetHeight || 600;
@@ -67,14 +172,18 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
                     clonedElement.style.left = '0';
 
                     const image = clonedElement.querySelector('[data-share-image="true"]') as HTMLImageElement | null;
-                    // 仅在图片有效且有尺寸时应用背景图技巧
-                    if (image?.parentElement && image.complete && image.naturalWidth > 0) {
+                    if (image?.parentElement) {
                         const container = image.parentElement as HTMLElement;
-                        container.style.backgroundImage = `url("${image.src}")`;
+                        // 使用预加载的 Data URL (已经过 CORS 处理) 替换原图片
+                        const imageToUse = preloadedImageUrl || image.src;
+
+                        // 始终使用背景图方式，避免 img 标签的 CORS 问题
+                        container.style.backgroundImage = `url("${imageToUse}")`;
                         container.style.backgroundSize = 'cover';
                         container.style.backgroundPosition = 'center';
                         container.style.backgroundRepeat = 'no-repeat';
-                        image.style.visibility = 'hidden';
+                        // 隐藏原图片元素，防止 html2canvas 尝试绘制它
+                        image.style.display = 'none';
                     }
 
                     clonedElement
@@ -155,10 +264,10 @@ export const PromptShareModal: React.FC<PromptShareModalProps> = ({ prompt, vers
 
                         {/* Generated Image - 使用固定高度确保坐标计算准确 */}
                         <div className="relative w-full h-[400px] overflow-hidden bg-slate-900">
-                            {version.imageUrl ? (
+                            {(preloadedImageUrl || version.imageUrl) ? (
                                 <img
                                     data-share-image="true"
-                                    src={version.imageUrl}
+                                    src={preloadedImageUrl || version.imageUrl}
                                     alt="Shared focus"
                                     className="w-full h-full object-cover"
                                     crossOrigin="anonymous"
