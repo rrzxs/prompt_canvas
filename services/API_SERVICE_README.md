@@ -25,12 +25,15 @@ import { apiService } from './services/apiService';
 ### 认证相关
 
 ```typescript
-// 注册
-const user = await apiService.register('username', 'password');
+// 获取 SSO provider 列表
+const providerResult = await apiService.getSsoProviders();
 
-// 登录
-const authResponse = await apiService.login('username', 'password');
-// JWT 令牌会自动保存到 localStorage
+// 获取授权地址并跳转
+const { authorizeUrl } = await apiService.getSsoAuthorizeUrl();
+window.location.href = authorizeUrl;
+
+// 回调页交换 code/state，JWT 会自动保存到 localStorage
+await apiService.exchangeSsoCode(code, state, provider);
 
 // 获取当前用户
 const currentUser = await apiService.getCurrentUser();

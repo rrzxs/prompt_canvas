@@ -23,6 +23,17 @@ export interface AuthResponse {
   tokenType: string;
 }
 
+export interface SSOProviderItem {
+  id: string;
+  displayName: string;
+  enabled: boolean;
+}
+
+export interface SSOProvidersResponse {
+  enabled: boolean;
+  providers: SSOProviderItem[];
+}
+
 // 分类结果接口
 export interface ClassificationResult {
   type: string;
@@ -120,32 +131,6 @@ class ApiService {
   // ==================== 认证 API ====================
 
   /**
-   * 用户注册
-   */
-  async register(username: string, password: string): Promise<User> {
-    const response = await this.client.post<User>('/api/auth/register', {
-      username,
-      password,
-    });
-    return response.data;
-  }
-
-  /**
-   * 用户登录
-   */
-  async login(username: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/api/auth/login', {
-      username,
-      password,
-    });
-    
-    // 保存令牌
-    this.setToken(response.data.accessToken);
-    
-    return response.data;
-  }
-
-  /**
    * 用户登出
    */
   logout(): void {
@@ -159,6 +144,58 @@ class ApiService {
    */
   async getCurrentUser(): Promise<User> {
     const response = await this.client.get<User>('/api/auth/me');
+    return response.data;
+  }
+
+  /**
+   * 获取 SSO Provider 列表
+   */
+  async getSsoProviders(): Promise<SSOProvidersResponse> {
+    const response = await this.client.get<SSOProvidersResponse>('/api/auth/sso/providers');
+    return response.data;
+  }
+
+  /**
+   * 获取 SSO 授权地址
+   */
+  async getSsoAuthorizeUrl(provider?: string): Promise<{ authorizeUrl: string; provider: string }> {
+    const params = provider ? { provider } : undefined;
+    const response = await this.client.get<{ authorizeUrl: string; provider: string }>(
+      '/api/auth/sso/authorize-url',
+      { params }
+    );
+    return response.data;
+  }
+
+  /**
+   * 清理 SSO 站点会话（用于“指定登录渠道”前强制重新选择身份）
+   */
+  async resetSsoSession(): Promise<void> {
+    await this.client.post('/sso/api/v1/oauth/logout');
+  }
+
+  /**
+   * 获取 SSO 绑定授权地址（当前登录用户）
+   */
+  async getSsoBindAuthorizeUrl(provider: string): Promise<{ authorizeUrl: string; provider: string }> {
+    const response = await this.client.get<{ authorizeUrl: string; provider: string }>(
+      '/api/auth/sso/bind/authorize-url',
+      { params: { provider } }
+    );
+    return response.data;
+  }
+
+  /**
+   * 交换 SSO code 并写入本地 token
+   */
+  async exchangeSsoCode(code: string, state: string, provider?: string): Promise<AuthResponse> {
+    const response = await this.client.post<AuthResponse>('/api/auth/sso/exchange', {
+      code,
+      state,
+      provider,
+    });
+
+    this.setToken(response.data.accessToken);
     return response.data;
   }
 

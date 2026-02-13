@@ -10,7 +10,7 @@ import { CreditDisplay } from './components/CreditDisplay';
 import { CreditHistory } from './components/CreditHistory';
 import { CreditGuide, useCreditGuide } from './components/CreditGuide';
 import { CreditStatusBanner } from './components/CreditStatusBanner';
-import { apiService } from './services/apiService';
+import { apiService, SSOProviderItem } from './services/apiService';
 import { VERSION } from './version';
 
 // ... (Sidebar, SettingsPage, LoginPage, Dashboard components remain unchanged)
@@ -112,6 +112,21 @@ const Sidebar = ({ user, onLogout, onCloseMobile }: { user: User, onLogout: () =
 const SettingsPage = ({ user }: { user: User }) => {
   const [jsonOutput, setJsonOutput] = useState('');
   const [importStatus, setImportStatus] = useState('');
+  const [ssoProviders, setSsoProviders] = useState<SSOProviderItem[]>([]);
+  const [ssoBinding, setSsoBinding] = useState(false);
+  const [ssoBindError, setSsoBindError] = useState('');
+
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        const result = await apiService.getSsoProviders();
+        setSsoProviders(result.providers || []);
+      } catch (err) {
+        console.warn('load sso providers failed', err);
+      }
+    };
+    void loadProviders();
+  }, []);
 
   const handleExport = async () => {
     try {
@@ -145,6 +160,18 @@ const SettingsPage = ({ user }: { user: User }) => {
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
       setImportStatus(`错误: ${apiService.getErrorMessage(err)}`);
+    }
+  };
+
+  const handleBindSso = async (provider: string) => {
+    setSsoBindError('');
+    setSsoBinding(true);
+    try {
+      const result = await apiService.getSsoBindAuthorizeUrl(provider);
+      window.location.href = result.authorizeUrl;
+    } catch (err: any) {
+      setSsoBindError(apiService.getErrorMessage(err));
+      setSsoBinding(false);
     }
   };
 
@@ -200,6 +227,34 @@ const SettingsPage = ({ user }: { user: User }) => {
             </p>
           )}
         </div>
+
+        <div className="bg-panel border border-slate-700 rounded-xl p-6 md:col-span-2">
+          <div className="w-12 h-12 bg-amber-500/20 rounded-lg flex items-center justify-center text-amber-400 mb-4">
+            <Icons.ExternalLink className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">绑定第三方账号（SSO）</h3>
+          <p className="text-slate-400 text-sm mb-6">
+            已有账号可绑定 Google / GitHub。绑定后可直接使用第三方登录进入当前账号，数据不会丢失。
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {ssoProviders.filter(item => item.enabled).map((provider) => (
+              <button
+                key={`bind-${provider.id}`}
+                onClick={() => handleBindSso(provider.id)}
+                disabled={ssoBinding}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-70"
+              >
+                {ssoBinding ? '跳转中...' : `绑定 ${provider.displayName}`}
+              </button>
+            ))}
+            {ssoProviders.filter(item => item.enabled).length === 0 && (
+              <p className="text-slate-500 text-sm">当前暂无可用的 SSO 渠道（请先在 SSO Server 配置客户端密钥）。</p>
+            )}
+          </div>
+          {ssoBindError && (
+            <p className="mt-4 text-sm text-red-400">{ssoBindError}</p>
+          )}
+        </div>
       </div>
 
       {/* <div className="mt-12 p-6 bg-slate-900/50 rounded-xl border border-slate-800">
@@ -216,152 +271,120 @@ const SettingsPage = ({ user }: { user: User }) => {
   );
 };
 
-const LoginPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [isRegister, setIsRegister] = useState(searchParams.get('mode') === 'register');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+const LoginPage = () => {
+  const hasStarted = useRef(false);
+  const [ssoLoading, setSsoLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSsoLogin = async () => {
     setError('');
-
-    if (!username.trim() || !password.trim()) {
-      setError("请输入用户名和密码");
-      return;
-    }
-
-    if (isRegister && password !== confirmPassword) {
-      setError("两次输入的密码不一致");
-      return;
-    }
-
-    setLoading(true);
+    setSsoLoading(true);
     try {
-      if (isRegister) {
-        // 注册用户
-        const newUser = await apiService.register(username, password);
-        // 注册成功后自动登录
-        const authResponse = await apiService.login(username, password);
-        // 存储令牌和用户信息
-        localStorage.setItem('promptcanvas_token', authResponse.accessToken);
-        localStorage.setItem('promptcanvas_session', JSON.stringify(newUser));
-        onLogin(newUser);
-      } else {
-        // 登录用户
-        const authResponse = await apiService.login(username, password);
-        // 获取用户信息
-        const user = await apiService.getCurrentUser();
-        // 存储令牌和用户信息
-        localStorage.setItem('promptcanvas_token', authResponse.accessToken);
-        localStorage.setItem('promptcanvas_session', JSON.stringify(user));
-        onLogin(user);
-      }
+      const result = await apiService.getSsoAuthorizeUrl();
+      window.location.href = result.authorizeUrl;
     } catch (err: any) {
       setError(apiService.getErrorMessage(err));
-    } finally {
-      setLoading(false);
+      setSsoLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+    void handleSsoLogin();
+  }, []);
+
   return (
     <div className="h-screen w-full flex items-center justify-center bg-canvas relative overflow-hidden">
-      <div className="absolute top-4 left-4 z-20">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-slate-800"
-        >
-          <Icons.ChevronLeft className="w-5 h-5" />
-          返回首页
-        </button>
-      </div>
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
       <div className="w-full max-w-md bg-panel border border-slate-700 p-8 rounded-2xl shadow-2xl relative z-10 mx-4">
-        <div className="text-center mb-8">
+        <div className="text-center">
           <div className="w-16 h-16 bg-accent/20 rounded-2xl mx-auto flex items-center justify-center mb-4 text-accent">
             <Icons.Layers className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {isRegister ? '创建账号' : '欢迎回来'}
-          </h1>
-          <p className="text-slate-400">
-            {isRegister ? '加入观想阁，开启您的创意之旅。' : '登录以访问您的专属提示词库。'}
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">正在前往统一登录</h1>
+          {!error && (
+            <p className="text-slate-400 flex items-center justify-center gap-2">
+              <Icons.Refresh className="w-4 h-4 animate-spin" />
+              正在跳转 SSO 授权中心...
+            </p>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">用户名</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-accent outline-none transition-all"
-              placeholder="请输入您的用户名"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-accent outline-none transition-all"
-              placeholder="请输入密码"
-            />
-          </div>
-
-          {isRegister && (
-            <div className="animate-in slide-in-from-top-2 duration-300">
-              <label className="block text-sm font-medium text-slate-300 mb-1">确认密码</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-accent outline-none transition-all"
-                placeholder="再次输入密码"
-              />
-            </div>
-          )}
-
-          {error && (
+        {error && (
+          <div className="mt-6">
             <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 flex items-center gap-2 text-red-300 text-sm">
               <Icons.X className="w-4 h-4" />
               {error}
             </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-accent hover:bg-accent-hover text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-70 flex items-center justify-center gap-2 mt-2"
-          >
-            {loading && <Icons.Refresh className="w-4 h-4 animate-spin" />}
-            {loading ? '处理中...' : (isRegister ? '立即注册' : '登录')}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-slate-400 text-sm">
-            {isRegister ? '已有账号？' : '还没有账号？'}
             <button
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setError('');
-                setUsername('');
-                setPassword('');
-                setConfirmPassword('');
-              }}
-              className="text-accent hover:underline ml-1 font-medium"
+              onClick={() => void handleSsoLogin()}
+              disabled={ssoLoading}
+              className="mt-4 w-full bg-accent hover:bg-accent-hover text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-70"
             >
-              {isRegister ? '去登录' : '免费注册'}
+              {ssoLoading ? '重试中...' : '失败重试'}
             </button>
-          </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const SSOCallbackPage = ({ onLogin }: { onLogin: (u: User) => void }) => {
+  const navigate = useNavigate();
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const run = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const state = url.searchParams.get('state');
+      const oauthError = url.searchParams.get('error');
+
+      if (oauthError) {
+        setError(`SSO 登录失败: ${oauthError}`);
+        return;
+      }
+
+      if (!code || !state) {
+        setError('缺少 SSO 回调参数 code/state');
+        return;
+      }
+
+      try {
+        await apiService.exchangeSsoCode(code, state);
+        const user = await apiService.getCurrentUser();
+        localStorage.setItem('promptcanvas_session', JSON.stringify(user));
+        onLogin(user);
+        navigate('/dashboard', { replace: true });
+      } catch (err: any) {
+        setError(apiService.getErrorMessage(err));
+      }
+    };
+
+    void run();
+  }, [navigate, onLogin]);
+
+  return (
+    <div className="h-screen w-full flex items-center justify-center bg-canvas">
+      <div className="w-full max-w-md bg-panel border border-slate-700 p-8 rounded-2xl shadow-2xl text-center mx-4">
+        <div className="w-14 h-14 bg-accent/20 rounded-2xl mx-auto flex items-center justify-center mb-4 text-accent">
+          <Icons.Refresh className="w-7 h-7 animate-spin" />
         </div>
+        <h1 className="text-2xl font-bold text-white mb-2">正在完成登录</h1>
+        {!error && <p className="text-slate-400">请稍候，正在同步 SSO 身份信息...</p>}
+        {error && (
+          <>
+            <p className="text-red-300 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2 mt-4">{error}</p>
+            <button
+              onClick={() => navigate('/login', { replace: true })}
+              className="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-100"
+            >
+              返回登录
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1028,12 +1051,24 @@ const App = () => {
   }, []);
 
   const handleLogout = () => {
-    // 调用 apiService 清除令牌
-    apiService.logout();
-    // 清除本地存储
-    localStorage.removeItem('promptcanvas_token');
-    localStorage.removeItem('promptcanvas_session');
-    setUser(null);
+    void (async () => {
+      try {
+        // 同步清理 SSO 会话，避免被立即单点登录带回系统
+        await apiService.resetSsoSession();
+      } catch (err) {
+        console.warn('reset sso session failed', err);
+      }
+
+      // 调用 apiService 清除令牌
+      apiService.logout();
+      // 清除本地存储
+      localStorage.removeItem('promptcanvas_token');
+      localStorage.removeItem('promptcanvas_session');
+
+      // 退出后回首页，避免受保护路由立刻跳到 /login 再自动发起 SSO
+      window.location.hash = '#/';
+      setUser(null);
+    })();
   };
 
   if (!init) return null;
@@ -1042,7 +1077,8 @@ const App = () => {
     <HashRouter>
       <Routes>
         <Route path="/" element={<LandingPage user={user} />} />
-        <Route path="/login" element={!user ? <LoginPage onLogin={setUser} /> : <Navigate to="/dashboard" />} />
+        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/sso/callback" element={<SSOCallbackPage onLogin={setUser} />} />
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={

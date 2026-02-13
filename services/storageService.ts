@@ -265,7 +265,7 @@ interface StoredUser extends User {
 // ============================================================================
 // 
 // 所有数据操作现在应该通过 apiService.ts 进行：
-// - 用户认证: apiService.register(), apiService.login(), apiService.logout()
+// - 用户认证: apiService.getSsoAuthorizeUrl(), apiService.exchangeSsoCode(), apiService.logout()
 // - 提示词管理: apiService.getPrompts(), apiService.createPrompt(), etc.
 // - 数据导入导出: apiService.exportData(), apiService.importData()
 //
