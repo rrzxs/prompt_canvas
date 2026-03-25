@@ -130,7 +130,7 @@ export const generateImage = async (prompt: string, referenceImageBase64?: strin
       config: {
         imageConfig: {
             aspectRatio: "1:1",
-            imageSize: "1K"
+            imageSize: "2K"
         }
       },
     });
